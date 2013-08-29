@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>${PRODUCT_NAME}</string>
+	<key>CFBundleExecutable</key>
+	<string>${EXECUTABLE_NAME}</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.galchenko.${PRODUCT_NAME:rfc1034identifier}</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>${PRODUCT_NAME}</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleVersion</key>
+	<string>1.0</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>armv7</string>
+	</array>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>MMSModels</key>
+	<array>
+		<dict>
+			<key>MMSModelName</key>
+			<string>Catwoman</string>
+			<key>MMSModelURL</key>
+			<string>https://cloud.box.com/shared/static/xz0is2u6lw8ltzw91sh0.obj</string>
+			<key>MMSModelNumFaces</key>
+			<integer>20092</integer>
+		</dict>
+		<dict>
+			<key>MMSModelName</key>
+			<string>Praying Mantis</string>
+			<key>MMSModelURL</key>
+			<string>https://cloud.box.com/shared/static/n28prxplszixh70ef1g1.obj</string>
+			<key>MMSModelNumFaces</key>
+			<integer>30510</integer>
+		</dict>
+		<dict>
+			<key>MMSModelName</key>
+			<string>Grayson</string>
+			<key>MMSModelURL</key>
+			<string>https://cloud.box.com/shared/static/h3q7mcnwtqt7pyiw6ucy.obj</string>
+			<key>MMSModelNumFaces</key>
+			<integer>43709</integer>
+		</dict>
+	</array>
+</dict>
+</plist>

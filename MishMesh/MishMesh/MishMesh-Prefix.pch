@@ -1,0 +1,15 @@
+//
+// Prefix header for all source files of the 'MishMesh' target in the 'MishMesh' project
+//
+
+#ifdef __OBJC__
+    #import <Foundation/Foundation.h>
+#endif
+
+#pragma mark Logging
+#define VLog(s, ...)				NSLog(@"<%@:%d> %@", [[NSString stringWithUTF8String:__FILE__] lastPathComponent], \
+__LINE__, [NSString stringWithFormat:(s), ##__VA_ARGS__])
+#define LineID						[NSString stringWithFormat:@"<%@:%d>", [[NSString stringWithUTF8String:__FILE__] lastPathComponent], \
+__LINE__]
+#define ASSERT_MAIN_THREAD()        NSAssert([[NSThread currentThread] isMainThread], @"<%@:%d> This must be executed on the main thread.",\
+[[NSString stringWithUTF8String:__FILE__] lastPathComponent], __LINE__);
