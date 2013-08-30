@@ -10,6 +10,7 @@
 #import "MSHRange.h"
 
 #define ERROR_DOMAIN_NAME       @"MSHParseError"
+#define MAX_NUM_VERTICES        USHRT_MAX
 
 typedef enum MSHParseError
 {
@@ -19,6 +20,7 @@ typedef enum MSHParseError
     MSHParseErrorInvalidVertexDefinition,
     MSHParseErrorInvalidNormalDefinition,
     MSHParseErrorInvalidFaceDefinition,
+    MSHParseErrorVertexNumberLimitExceeded,
     MSHParseErrorUnknown
 } MSHParseError;
 

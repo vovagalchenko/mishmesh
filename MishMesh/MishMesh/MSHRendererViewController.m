@@ -92,6 +92,7 @@ typedef struct EulerAngles
     if (self = [super init])
     {
         self.rendererDelegate = rendererDelegate;
+        self.meshColor = [UIColor colorWithRed:0.7f green:0.2f blue:0.2f alpha:1.0f];
     }
     return self;
 }
@@ -103,6 +104,7 @@ typedef struct EulerAngles
     self.context = [[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES2];
     GLKView *view = (GLKView *)self.view;
     self.view.opaque = YES;
+    self.view.backgroundColor = [UIColor colorWithRed:212.0/255.0 green:209.0/255.0 blue:187.0/255.0 alpha:1.0];
     view.context = self.context;
     view.drawableDepthFormat = GLKViewDrawableDepthFormat16;
     view.drawableMultisample = GLKViewDrawableMultisample4X;
@@ -111,7 +113,10 @@ typedef struct EulerAngles
     
     self.effect = [[GLKBaseEffect alloc] init];
     self.effect.light0.enabled = GL_TRUE;
-    self.effect.light0.diffuseColor = GLKVector4Make(0.7f, 0.2f, 0.2f, 1.0f);
+    
+    CGFloat colorComponents[4];
+    getRGBA(self.meshColor, colorComponents);
+    self.effect.light0.diffuseColor = GLKVector4Make(colorComponents[0], colorComponents[1], colorComponents[2], colorComponents[3]);
     
     glEnable(GL_DEPTH_TEST);
     
@@ -133,7 +138,7 @@ typedef struct EulerAngles
 - (void)dealloc
 {
     [self tearDownOpenGL];
-    free(_numVerticesInFace);
+    [self cleanupDisplayedMesh];
 }
 
 - (void)didReceiveMemoryWarning
@@ -160,6 +165,7 @@ typedef struct EulerAngles
 {
     _vao = 0;
     free(_numVerticesInFace);
+    _numVerticesInFace = NULL;
     _rotation = 0;
 }
 
@@ -214,6 +220,8 @@ typedef struct EulerAngles
     _nearZ = _eyeZ - nearZLocation;
     _farZ = _nearZ + 2*nearZLocation;
     _modelMatrix = GLKMatrix4MakeTranslation(-getMidpoint(file.xRange), -getMidpoint(file.yRange), -getMidpoint(file.zRange));
+    _numVerticesInFace = file.numVerticesInFace;
+    _numFaces = file.numFaces;
     
     glGenVertexArraysOES(1, &_vao);
     glBindVertexArrayOES(_vao);
@@ -234,9 +242,6 @@ typedef struct EulerAngles
     glVertexAttribPointer(GLKVertexAttribNormal, 3, GL_FLOAT, GL_FALSE, 24, BUFFER_OFFSET(12));
     
     glBindVertexArrayOES(0);
-    
-    _numVerticesInFace = file.numVerticesInFace;
-    _numFaces = file.numFaces;
     
     [self rendererChangedStatus:MSHRendererViewControllerStatusMeshDisplaying];
 }
@@ -491,7 +496,10 @@ static inline BOOL applyAnimationAttributes(float *attribute, MSHAnimationAttrib
 
 - (void)glkView:(GLKView *)view drawInRect:(CGRect)rect
 {
-    glClearColor(212.0/255.0, 209.0/255.0, 187.0/255.0, 1.0);
+    CGFloat colorComponents[4];
+    // Could optimize this by caching the color components for the background color.
+    getRGBA(self.view.backgroundColor, colorComponents);
+    glClearColor(colorComponents[0], colorComponents[1], colorComponents[2], colorComponents[3]);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
     if (_vao)
@@ -519,6 +527,33 @@ static inline BOOL applyAnimationAttributes(float *attribute, MSHAnimationAttrib
 - (void)rendererEncounteredError:(NSError *)error
 {
     
+}
+
+#pragma mark - Misc. Helpers
+
+static inline void getRGBA(UIColor *color, CGFloat *colorComponents)
+{
+    CGColorSpaceRef colorSpace = CGColorGetColorSpace(color.CGColor);
+    CGColorSpaceModel colorSpaceModel = CGColorSpaceGetModel(colorSpace);
+    
+    switch (colorSpaceModel)
+    {
+        case kCGColorSpaceModelRGB:
+            [color getRed:&colorComponents[0] green:&colorComponents[1] blue:&colorComponents[2] alpha:&colorComponents[3]];
+            break;
+        case kCGColorSpaceModelMonochrome:
+        {
+            CGFloat white;
+            [color getWhite:&white alpha:&colorComponents[3]];
+            colorComponents[0] = white;
+            colorComponents[1] = white;
+            colorComponents[2] = white;
+        }
+            break;
+        default:
+            NSCAssert(NO, @"Unsupported color space: %d", colorSpaceModel);
+            break;
+    }
 }
 
 @end

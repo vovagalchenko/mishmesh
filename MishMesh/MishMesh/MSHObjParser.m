@@ -100,6 +100,13 @@
                                     [tmpVertices addObject:[MSHVertex vertexWithX:x
                                                                                 y:y
                                                                                 z:z]];
+                                    if (tmpVertices.count > MAX_NUM_VERTICES)
+                                    {
+                                        self.parseError = [self errorWithMessage:[NSString stringWithFormat:@"This model exceeds the maximum number of vertices: %d", MAX_NUM_VERTICES]
+                                                                       errorCode:MSHParseErrorVertexNumberLimitExceeded];
+                                        self.parserStage = MSHParsingStageError;
+                                        return;
+                                    }
                                 }
                                 else if ([typeOfDefinition characterAtIndex:1] == 'n')
                                 {
@@ -209,6 +216,13 @@
                                             [vertices replaceObjectAtIndex:firstNormalIndex withObject:[NSNumber numberWithFloat:newAverageNormal.z]];
                                         }
                                     }
+                                }
+                                if (vertices.count/6 > MAX_NUM_VERTICES)
+                                {
+                                    self.parseError = [self errorWithMessage:[NSString stringWithFormat:@"This model exceeds the maximum number of vertices: %d", MAX_NUM_VERTICES]
+                                                                   errorCode:MSHParseErrorVertexNumberLimitExceeded];
+                                    self.parserStage = MSHParsingStageError;
+                                    return;
                                 }
                                 [faces addObject:[NSValue valueWithBytes:&face objCType:@encode(MSHFace)]];
                             }

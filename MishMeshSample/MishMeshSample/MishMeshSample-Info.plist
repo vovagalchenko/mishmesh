@@ -60,6 +60,46 @@
 			<key>MMSModelNumFaces</key>
 			<integer>43709</integer>
 		</dict>
+		<dict>
+			<key>MMSModelName</key>
+			<string>Caribbean Princess</string>
+			<key>MMSModelURL</key>
+			<string>https://cloud.box.com/shared/static/7hiwtc2i9nurzr4ifag0.obj</string>
+			<key>MMSModelNumFaces</key>
+			<integer>16019</integer>
+		</dict>
+		<dict>
+			<key>MMSModelName</key>
+			<string>Maybach</string>
+			<key>MMSModelURL</key>
+			<string>https://cloud.box.com/shared/static/bdkdt0p2j03zuo5ki494.obj</string>
+			<key>MMSModelNumFaces</key>
+			<integer>71508</integer>
+		</dict>
+		<dict>
+			<key>MMSModelName</key>
+			<string>Harley</string>
+			<key>MMSModelURL</key>
+			<string>https://cloud.box.com/shared/static/vliu4gj1rishoz8bpqjb.obj</string>
+			<key>MMSModelNumFaces</key>
+			<integer>13765</integer>
+		</dict>
+		<dict>
+			<key>MMSModelName</key>
+			<string>Jill</string>
+			<key>MMSModelURL</key>
+			<string>https://cloud.box.com/shared/static/ock9d81kakj91dz1x4ea.obj</string>
+			<key>MMSModelNumFaces</key>
+			<integer>16917</integer>
+		</dict>
+		<dict>
+			<key>MMSModelName</key>
+			<string>Avent</string>
+			<key>MMSModelURL</key>
+			<string>https://cloud.box.com/shared/static/2p9exny4dat6ooqm13rf.obj</string>
+			<key>MMSModelNumFaces</key>
+			<integer>169735</integer>
+		</dict>
 	</array>
 </dict>
 </plist>

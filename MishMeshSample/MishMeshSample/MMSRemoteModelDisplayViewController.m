@@ -145,7 +145,6 @@ static BOOL needsModal = YES;
 
 - (void)loadFile:(NSURL *)urlToLoad
 {
-    /*
     [self setLoadingHeaderText:@"Downloading..." infoText:@""];
     [NSURLConnection sendAsynchronousRequest:[[NSURLRequest alloc] initWithURL:urlToLoad]
                                        queue:[[NSOperationQueue alloc] init]
@@ -163,9 +162,6 @@ static BOOL needsModal = YES;
              [super loadFile:[NSURL fileURLWithPath:currentFile]];
          });
      }];
-    */
-    
-    [super loadFile:[[NSBundle mainBundle] URLForResource:@"mantis_praying" withExtension:@"obj"]];
 }
 
 - (void)showModelSelectionTableAnimated:(BOOL)animated
@@ -227,8 +223,14 @@ static BOOL needsModal = YES;
 
 - (void)rendererEncounteredError:(NSError *)error
 {
-    [self hideLoadingHUD];
-    [self showModelSelectionTableAnimated:YES];
+    [self setLoadingHeaderText:@"ERROR" infoText:error.localizedDescription];
+    double delayInSeconds = 2.0;
+    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+    dispatch_after(popTime, dispatch_get_main_queue(), ^(void)
+    {
+        [self hideLoadingHUD];
+        [self showModelSelectionTableAnimated:YES];
+    });
 }
 
 

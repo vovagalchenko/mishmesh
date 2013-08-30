@@ -15,7 +15,6 @@
 {
     self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
     MSHRendererViewController *rendererVC = [[MMSRemoteModelDisplayViewController alloc] init];
-    rendererVC.preferredFramesPerSecond = 60;
     self.window.rootViewController = rendererVC;
     self.window.backgroundColor = [UIColor whiteColor];
     [self.window makeKeyAndVisible];

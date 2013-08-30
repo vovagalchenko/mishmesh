@@ -30,8 +30,10 @@ typedef enum MSHRendererViewControllerStatus
 
 @interface MSHRendererViewController : GLKViewController <MSHRendererViewControllerDelegate>
 
+- (id)initWithDelegate:(id<MSHRendererViewControllerDelegate>)rendererDelegate;
 - (void)loadFile:(NSURL *)fileURL;
 
 @property (nonatomic, weak) id<MSHRendererViewControllerDelegate>rendererDelegate;
+@property (nonatomic, strong) UIColor *meshColor;
 
 @end
