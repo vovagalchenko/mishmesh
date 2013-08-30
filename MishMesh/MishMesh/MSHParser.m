@@ -36,9 +36,9 @@
 
 - (void)parseFileWithStatusChangeBlock:(void (^)(MSHParser *parser))completion
 {
-    self.parserStage = MSHParsingStageError;
+    self.onStatusUpdateBlock = completion;
     self.parseError = [self errorWithMessage:[NSString stringWithFormat:@"No parser for filetype %@", [self.fileURL pathExtension]] errorCode:MSHParseErrorFileTypeUnsupported];
-    completion(self);
+    self.parserStage = MSHParsingStageError;
 }
 
 - (NSError *)errorWithMessage:(NSString *)msg errorCode:(MSHParseError)errCode
