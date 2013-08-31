@@ -19,7 +19,7 @@
                          y:(GLfloat)y
                          z:(GLfloat)z;
 - (void)addNormalWithNormalId:(id)normalId suggestedIndex:(unsigned int *)suggestedIndex;
-- (GLfloat)xZPlaneDistanceToVertex:(MSHVertex *)otherVertex;
+- (GLfloat)distanceToVertex:(MSHVertex *)otherVertex;
 - (NSArray *)calculateNormalForTriangleFormedWithVertex2:(MSHVertex *)vertex2 andVertex3:(MSHVertex *)vertex3;
 - (BOOL)usesNormalAveraging;
 - (GLKVector3)addNormalToAverage:(NSArray *)normal;

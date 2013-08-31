@@ -12,7 +12,7 @@
 @interface MSHFile()
 
 @property (nonatomic, readwrite, strong) NSURL *localURL;
-@property (nonatomic, readwrite, strong) MSHVertex *xZOutlier;
+@property (nonatomic, readwrite, strong) MSHVertex *outlierVertex;
 @property (nonatomic, readwrite, assign) MSHFileStatus status;
 @property (nonatomic, readwrite, strong) void (^onStatusUpdateBlock)(MSHFile *);
 @property (nonatomic, readwrite, strong) NSError *processingError;
@@ -88,8 +88,8 @@
                             _vertexCoordinates[i++] = [floatNumber floatValue];
                         }
                         MSHVertex *centerVertex = [MSHVertex vertexWithX:getMidpoint(changedParser.xRange) y:getMidpoint(changedParser.yRange) z:getMidpoint(changedParser.zRange)];
-                        GLfloat outMaxPlanarDistance = 0;
-                        MSHVertex *xzOutlier;
+                        GLfloat maxDistance = 0;
+                        MSHVertex *outlier;
                         for (int i = 0; i < changedParser.faces.count; i++)
                         {
                             MSHFace face;
@@ -100,18 +100,18 @@
                                 MSHVertex *vertex = [MSHVertex vertexWithX:self.vertexCoordinates[verticeStartIndex++]
                                                                          y:self.vertexCoordinates[verticeStartIndex++]
                                                                          z:self.vertexCoordinates[verticeStartIndex]];
-                                GLfloat distance = [centerVertex xZPlaneDistanceToVertex:vertex];
-                                if (distance > outMaxPlanarDistance)
+                                GLfloat distance = [centerVertex distanceToVertex:vertex];
+                                if (distance > maxDistance)
                                 {
-                                    outMaxPlanarDistance = fabsf(distance);
-                                    xzOutlier = vertex;
+                                    maxDistance = distance;
+                                    outlier = vertex;
                                 }
                             }
                         }
                         _xRange = changedParser.xRange;
                         _yRange = changedParser.yRange;
                         _zRange = changedParser.zRange;
-                        self.xZOutlier = xzOutlier;
+                        self.outlierVertex = outlier;
                         self.status = MSHFileStatusReady;
                     });
                  }

@@ -65,11 +65,12 @@
     return _avgNormal;
 }
 
-- (GLfloat)xZPlaneDistanceToVertex:(MSHVertex *)otherVertex
+- (GLfloat)distanceToVertex:(MSHVertex *)otherVertex
 {
     GLfloat dx = otherVertex.position.x - self.position.x;
+    GLfloat dy = otherVertex.position.y - self.position.y;
     GLfloat dz = otherVertex.position.z - self.position.z;
-    return sqrt(dx*dx + dz*dz);
+    return sqrt(dx*dx + dy*dy + dz*dz);
 }
 
 - (NSArray *)calculateNormalForTriangleFormedWithVertex2:(MSHVertex *)vertex2 andVertex3:(MSHVertex *)vertex3

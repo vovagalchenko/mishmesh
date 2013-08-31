@@ -35,7 +35,7 @@ typedef enum MSHFileStatus
 @property (nonatomic, readonly) GLsizeiptr vertexIndicesSize;
 @property (nonatomic, readonly) GLubyte *numVerticesInFace; // The caller will need to free this space
 @property (nonatomic, readonly) NSUInteger numFaces;
-@property (nonatomic, readonly) MSHVertex *xZOutlier;
+@property (nonatomic, readonly) MSHVertex *outlierVertex;
 @property (nonatomic, readonly) MSHRange xRange, yRange, zRange;
 @property (nonatomic, readonly) MSHFileStatus status;
 @property (nonatomic, readonly) NSError *processingError;
