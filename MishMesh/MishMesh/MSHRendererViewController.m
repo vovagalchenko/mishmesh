@@ -55,6 +55,8 @@ typedef struct EulerAngles
     GLfloat _scale, _lastScale;
     GLfloat _aspect, _nearZ, _farZ;
     GLfloat _panX, _panY, _panZ;
+	GLfloat _maxXZPlanarDistance;
+	GLfloat _maxHeight;
     GLKMatrix4 _modelMatrix;
     GLubyte *_numVerticesInFace;
     GLuint _numFaces;
@@ -80,7 +82,7 @@ typedef struct EulerAngles
 
 @implementation MSHRendererViewController
 
-#pragma mark - Lifecycle
+#pragma mark - UIViewController
 
 - (id)init
 {
@@ -132,7 +134,7 @@ typedef struct EulerAngles
 
 - (BOOL)shouldAutorotate
 {
-    return NO;
+    return self.referenceAttitude == nil;
 }
 
 - (void)dealloc
@@ -159,6 +161,17 @@ typedef struct EulerAngles
     self.effect = nil;
 }
 
+
+- (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation
+{
+    if (UIInterfaceOrientationIsLandscape(fromInterfaceOrientation) ^
+        UIInterfaceOrientationIsLandscape(self.interfaceOrientation))
+    {
+        [self calculateCameraParams];
+        [self animateToInitialPerspective];
+    }
+}
+
 #pragma mark - File Loading
 
 - (void)cleanupDisplayedMesh
@@ -177,48 +190,57 @@ typedef struct EulerAngles
     MSHFile *file = [[MSHFile alloc] initWithURL:fileURL];
     __weak MSHRendererViewController *weakSelf = self;
     [file parseWithStatusUpdateBlock:^(MSHFile *parsedFile)
-    {
-        ASSERT_MAIN_THREAD();
-        switch (parsedFile.status)
-        {
-            case MSHFileStatusFailure:
-                [weakSelf.rendererDelegate rendererEncounteredError:parsedFile.processingError];
-                break;
-            case MSHFileStatusReady:
-                [weakSelf loadFileIntoGraphicsHardware:file];
-                break;
-            case MSHFileStatusCalibrating:
-                [weakSelf.rendererDelegate rendererChangedStatus:MSHRendererViewControllerStatusMeshCalibrating];
-                break;
-            case MSHFileStatusParsingVertices:
-                [weakSelf.rendererDelegate rendererChangedStatus:MSHRendererViewControllerStatusFileLoadParsingVertices];
-                break;
-            case MSHFileStatusParsingFaces:
-                [weakSelf.rendererDelegate rendererChangedStatus:MSHRendererViewControllerStatusFileLoadParsingVertexNormals];
-                break;
-            case MSHFileStatusParsingVertexNormals:
-                [weakSelf.rendererDelegate rendererChangedStatus:MSHRendererViewControllerStatusFileLoadParsingFaces];
-                break;
-            default:
-                [weakSelf.rendererDelegate rendererChangedStatus:MSHRendererViewControllerStatusUnknown];
-                break;
-        }
-    }];
+     {
+         ASSERT_MAIN_THREAD();
+         switch (parsedFile.status)
+         {
+             case MSHFileStatusFailure:
+                 [weakSelf.rendererDelegate rendererEncounteredError:parsedFile.processingError];
+                 break;
+             case MSHFileStatusReady:
+                 [weakSelf loadFileIntoGraphicsHardware:file];
+                 break;
+             case MSHFileStatusCalibrating:
+                 [weakSelf.rendererDelegate rendererChangedStatus:MSHRendererViewControllerStatusMeshCalibrating];
+                 break;
+             case MSHFileStatusParsingVertices:
+                 [weakSelf.rendererDelegate rendererChangedStatus:MSHRendererViewControllerStatusFileLoadParsingVertices];
+                 break;
+             case MSHFileStatusParsingFaces:
+                 [weakSelf.rendererDelegate rendererChangedStatus:MSHRendererViewControllerStatusFileLoadParsingVertexNormals];
+                 break;
+             case MSHFileStatusParsingVertexNormals:
+                 [weakSelf.rendererDelegate rendererChangedStatus:MSHRendererViewControllerStatusFileLoadParsingFaces];
+                 break;
+             default:
+                 [weakSelf.rendererDelegate rendererChangedStatus:MSHRendererViewControllerStatusUnknown];
+                 break;
+         }
+     }];
+}
+
+- (void)calculateCameraParams
+{
+    _aspect = fabsf(self.view.bounds.size.width / self.view.bounds.size.height);
+    GLfloat camHorizAngle = 2*atan(_aspect*tan(CAM_VERT_ANGLE/2));
+    GLfloat distanceToFitHorizontally = (_maxXZPlanarDistance * PORTION_OF_DIMENSION_TO_FIT)/(2*tan(camHorizAngle/2));
+    GLfloat distanceToFitVertically = (_maxHeight * PORTION_OF_DIMENSION_TO_FIT)/(2*tan(CAM_VERT_ANGLE/2));
+    GLfloat distanceToFitDepthWise = (_maxXZPlanarDistance/2 * PORTION_OF_DIMENSION_TO_FIT);
+    GLfloat nearZLocation = MAX(distanceToFitDepthWise, MAX(distanceToFitHorizontally, distanceToFitVertically));
+    _eyeZ = nearZLocation/RATIO_OF_NEAR_Z_BOUND_LOCATION_TO_EYE_Z_LOCATION;
+    _nearZ = _eyeZ - nearZLocation;
+    _farZ = _nearZ + 2*nearZLocation;
+    
 }
 
 - (void)loadFileIntoGraphicsHardware:(MSHFile *)file
 {
     [self rendererChangedStatus:MSHRendererViewControllerStatusMeshLoadingIntoGraphicsHardware];
-    _aspect = fabsf(self.view.bounds.size.width / self.view.bounds.size.height);
-    GLfloat camHorizAngle = 2*atan(_aspect*tan(CAM_VERT_ANGLE/2));
-    CGFloat maxPlanarDistance = [file.xZOutlier xZPlaneDistanceToVertex:[MSHVertex vertexWithX:getMidpoint(file.xRange) y:getMidpoint(file.yRange) z:getMidpoint(file.zRange)]]*2;
-    GLfloat distanceToFitHorizontally = (maxPlanarDistance * PORTION_OF_DIMENSION_TO_FIT)/(2*tan(camHorizAngle/2));
-    GLfloat distanceToFitVertically = (getSpread(file.yRange) * PORTION_OF_DIMENSION_TO_FIT)/(2*tan(CAM_VERT_ANGLE/2));
-    GLfloat distanceToFitDepthWise = (maxPlanarDistance/2 * PORTION_OF_DIMENSION_TO_FIT);
-    GLfloat nearZLocation = MAX(distanceToFitDepthWise, MAX(distanceToFitHorizontally, distanceToFitVertically));
-    _eyeZ = nearZLocation/RATIO_OF_NEAR_Z_BOUND_LOCATION_TO_EYE_Z_LOCATION;
-    _nearZ = _eyeZ - nearZLocation;
-    _farZ = _nearZ + 2*nearZLocation;
+    
+    _maxXZPlanarDistance = [file.xZOutlier xZPlaneDistanceToVertex:[MSHVertex vertexWithX:getMidpoint(file.xRange) y:getMidpoint(file.yRange) z:getMidpoint(file.zRange)]]*2;
+    _maxHeight = getSpread(file.yRange);
+    [self calculateCameraParams];
+    
     _modelMatrix = GLKMatrix4MakeTranslation(-getMidpoint(file.xRange), -getMidpoint(file.yRange), -getMidpoint(file.zRange));
     _numVerticesInFace = file.numVerticesInFace;
     _numFaces = file.numFaces;
@@ -268,7 +290,7 @@ typedef struct EulerAngles
 {
     if ([longPressRecognizer state] == UIGestureRecognizerStateBegan)
     {
-        if (self.motionManager.deviceMotion.attitude)
+        if (self.motionManager.deviceMotion.attitude && UIInterfaceOrientationIsPortrait(self.interfaceOrientation))
         {
             [self.deviceMotionIconView removeFromSuperview];
             self.deviceMotionIconView = nil;
@@ -292,7 +314,7 @@ typedef struct EulerAngles
              }];
         }
     }
-    else if ([longPressRecognizer state] == UIGestureRecognizerStateEnded)
+    else if ([longPressRecognizer state] == UIGestureRecognizerStateEnded && UIInterfaceOrientationIsPortrait(self.interfaceOrientation))
     {
         self.referenceAttitude = self.motionManager.deviceMotion.attitude;
         [UIView animateWithDuration:ANIMATION_LENGTH animations:^
