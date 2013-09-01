@@ -12,14 +12,15 @@
 #import "MSHFace.h"
 #import <CoreMotion/CoreMotion.h>
 #import "MSHDeviceMotionIconView.h"
+#import <fenv.h>
 
 #define BUFFER_OFFSET(i)                                        ((char *)NULL + (i))
 #define CAM_VERT_ANGLE                                          GLKMathDegreesToRadians(65)
 #define PORTION_OF_DIMENSION_TO_FIT                             1.2f
 #define RATIO_OF_NEAR_Z_BOUND_LOCATION_TO_EYE_Z_LOCATION        0.8f
 #define ROTATION_DECELERATION_RATE                              0.1f
-#define MIN_SCALE                                               (CAM_VERT_ANGLE/M_PI*2)
-#define MAX_SCALE                                               2*M_PI
+#define MAX_SCALE                                               (4*M_PI)
+#define MIN_SCALE                                               1
 #define DOUBLE_TAP_CHECK_TIMEOUT                                0.1f
 #define ANIMATION_LENGTH                                        0.5f
 
@@ -31,6 +32,8 @@
 #define DEVICE_MOTION_ICON_RESTING_Y                            DEVICE_MOTION_ICON_PADDING
 #define DEVICE_MOTION_ANIMATION_LENGTH                          0.2f
 #define FINGER_FAT                                              22.0f
+
+#define PINCH_ANCHOR_TOLERANCE                                  2.0f
 
 typedef struct MSHAnimationAttributes
 {
@@ -51,12 +54,9 @@ typedef struct EulerAngles
 {
     GLuint _vao;
     GLfloat _eyeZ; // For the view matrix
-    GLfloat _rotation, _rotationRate;
-    GLfloat _scale, _lastScale;
     GLfloat _aspect, _nearZ, _farZ;
-    GLfloat _panX, _panY, _panZ;
 	GLfloat _maxDistanceToFit;
-    GLKMatrix4 _modelMatrix;
+    GLKMatrix4 _modelMatrix, _modelTransforms, _viewMatrix;
     GLubyte *_numVerticesInFace;
     GLuint _numFaces;
     
@@ -68,13 +68,19 @@ typedef struct EulerAngles
     MSHAnimationAttributes _pitchAnimationAttributes;
     MSHAnimationAttributes _yawAnimationAttributes;
     MSHAnimationAttributes _rollAnimationAttributes;
+    MSHAnimationAttributes _quaternionAnimationAttributes;
     EulerAngles _animatingEulerAngles;
     
     CGPoint _quaternionAnchorPoint;
     GLKQuaternion _currentRotationQuaternion;
     GLKQuaternion _totalQuaternion;
     
-    BOOL needsModal;
+    CGPoint _panAnchorPoint;
+    GLKVector3 _totalPan;
+
+    CGPoint _lastSignificantScreenPinchAnchor;
+    GLKVector3 _pinchWorldAnchorPoint;
+    GLfloat _scale, _currentScale;
 }
 
 @property (strong, nonatomic) EAGLContext *context;
@@ -115,6 +121,7 @@ typedef struct EulerAngles
     view.context = self.context;
     view.drawableDepthFormat = GLKViewDrawableDepthFormat16;
     view.drawableMultisample = GLKViewDrawableMultisample4X;
+    view.multipleTouchEnabled = YES;
     
     [EAGLContext setCurrentContext:self.context];
     
@@ -130,11 +137,11 @@ typedef struct EulerAngles
     self.motionManager = [[CMMotionManager alloc] init];
     [self.motionManager startDeviceMotionUpdates];
     
-    _scale = 1;
     [self.view addGestureRecognizer:[[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(handlePinch:)]];
     [self.view addGestureRecognizer:[[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(handleLongPress:)]];
-    
-    needsModal = YES;
+    UIPanGestureRecognizer *panRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
+    panRecognizer.minimumNumberOfTouches = 2;
+    [self.view addGestureRecognizer:panRecognizer];
 }
 
 - (BOOL)shouldAutorotate
@@ -184,9 +191,11 @@ typedef struct EulerAngles
     _vao = 0;
     free(_numVerticesInFace);
     _numVerticesInFace = NULL;
-    _rotation = 0;
     _totalQuaternion = GLKQuaternionMake(0, 0, 0, 1);
     _currentRotationQuaternion = GLKQuaternionMake(0, 0, 0, 1);
+    _totalPan = GLKVector3Make(0, 0, 0);
+    _scale = 1;
+    _currentScale = 1;
 }
 
 - (void)loadFile:(NSURL *)fileURL
@@ -280,18 +289,51 @@ typedef struct EulerAngles
 
 - (void)handlePinch:(UIPinchGestureRecognizer *)pinchGestureRecognizer
 {
+    GLKMatrix4 transformsExceptRotation = GLKMatrix4Multiply(_modelTransforms, GLKMatrix4Invert([self totalRotationMatrix], NULL));
+    GLKMatrix4 modelviewMatrix = GLKMatrix4Multiply(_viewMatrix, GLKMatrix4Multiply(transformsExceptRotation, _modelMatrix));
     if ([pinchGestureRecognizer state] == UIGestureRecognizerStateBegan)
     {
-        _lastScale = pinchGestureRecognizer.scale;
+        _lastSignificantScreenPinchAnchor = [pinchGestureRecognizer locationInView:self.view];
+        _pinchWorldAnchorPoint = screenToWorld(_lastSignificantScreenPinchAnchor, self.view.bounds.size,
+                                         self.effect, modelviewMatrix);
     }
     if ([pinchGestureRecognizer state] == UIGestureRecognizerStateBegan ||
         [pinchGestureRecognizer state] == UIGestureRecognizerStateChanged)
     {
-        _scale += (pinchGestureRecognizer.scale - _lastScale);
-        _scale = MAX(MIN_SCALE, _scale);
-        _scale = MIN(MAX_SCALE, _scale);
-        _lastScale = pinchGestureRecognizer.scale;
+        
+        _currentScale = MIN(MAX_SCALE/_scale, MAX(MIN_SCALE/_scale, pinchGestureRecognizer.scale));
+        
+        if (pinchGestureRecognizer.numberOfTouches == 2)
+        {
+            CGPoint newScreenAnchorPoint = [pinchGestureRecognizer locationInView:self.view];
+            CGFloat distanceToLastSignificantAnchor = getDistance(newScreenAnchorPoint, _lastSignificantScreenPinchAnchor);
+            if (_currentScale > 1.0f || distanceToLastSignificantAnchor > PINCH_ANCHOR_TOLERANCE)
+            {
+                GLKVector3 newWorldAnchorPoint = screenToWorld(newScreenAnchorPoint, self.view.bounds.size, self.effect, modelviewMatrix);
+                if (!isnan(newWorldAnchorPoint.x) && !isnan(newWorldAnchorPoint.y) && !isnan(newWorldAnchorPoint.z))
+                {
+                    _lastSignificantScreenPinchAnchor = newScreenAnchorPoint;
+                    GLKVector3 additionalPan = GLKVector3Make(_pinchWorldAnchorPoint.x - newWorldAnchorPoint.x,
+                                                              _pinchWorldAnchorPoint.y - newWorldAnchorPoint.y,
+                                                              0);
+                    _totalPan = GLKVector3Add(_totalPan, additionalPan);
+                }
+            }
+        }
     }
+    else if (pinchGestureRecognizer.state == UIGestureRecognizerStateEnded ||
+             pinchGestureRecognizer.state == UIGestureRecognizerStateCancelled)
+    {
+        _scale = MIN(MAX_SCALE, MAX(MIN_SCALE, _currentScale*_scale));
+        _currentScale = 1;
+    }
+}
+
+static inline CGFloat getDistance(CGPoint point1, CGPoint point2)
+{
+    CGFloat dx = point1.x - point2.x;
+    CGFloat dy = point1.y - point2.y;
+    return sqrtf(dx*dx + dy*dy);
 }
 
 - (void)handleLongPress:(UILongPressGestureRecognizer *)longPressRecognizer
@@ -333,43 +375,24 @@ typedef struct EulerAngles
     }
 }
 
-static inline GLKVector3 mapTouchToSphere(CGSize viewSize, CGPoint touchCoordinates)
+- (void)handlePan:(UIPanGestureRecognizer *)panRecognizer
 {
-    CGFloat sphereRadius = MIN(viewSize.width, viewSize.height)/3;
-    GLKVector3 xyCenter = GLKVector3Make(viewSize.width/2, viewSize.height/2, 0);
-    GLKVector3 touchVectorFromCenter = GLKVector3Subtract(GLKVector3Make(touchCoordinates.x, touchCoordinates.y, 0), xyCenter);
-    touchVectorFromCenter = GLKVector3Make(touchVectorFromCenter.x, -touchVectorFromCenter.y, touchVectorFromCenter.z);
-    
-    GLfloat radiusSquared = sphereRadius*sphereRadius;
-    GLfloat xyLengthSquared = touchVectorFromCenter.x*touchVectorFromCenter.x + touchVectorFromCenter.y*touchVectorFromCenter.y;
-    
-    // Pythagoras has entered the building
-    if (radiusSquared >= xyLengthSquared)
-        touchVectorFromCenter.z = sqrt(radiusSquared - xyLengthSquared);
-    else
+    if ([panRecognizer state] == UIGestureRecognizerStateBegan)
     {
-        touchVectorFromCenter.x *= radiusSquared/sqrt(xyLengthSquared);
-        touchVectorFromCenter.y *= radiusSquared/sqrt(xyLengthSquared);
-        touchVectorFromCenter.z = 0;
+        _panAnchorPoint = [panRecognizer locationInView:self.view];
     }
-    return GLKVector3Normalize(touchVectorFromCenter);
-}
-
-static inline GLKQuaternion getQuaternion(GLKVector3 unitVector1, GLKVector3 unitVector2)
-{
-    GLKVector3 axis = GLKVector3CrossProduct(unitVector1, unitVector2);
-    GLfloat angle = acosf(GLKVector3DotProduct(unitVector1, unitVector2));
-    GLKQuaternion result = GLKQuaternionMakeWithAngleAndVector3Axis(angle, axis);
-    if (result.w != 1)
-        result = GLKQuaternionNormalize(result);
-    return result;
-}
-
-static inline void printQuaternion(GLKQuaternion quaternion)
-{
-    GLKVector3 axis = GLKQuaternionAxis(quaternion);
-    float angle = GLKQuaternionAngle(quaternion);
-    VLog(@"(%f, %f, %f) %f", axis.x, axis.y, axis.z, angle);
+    else if ([panRecognizer state] == UIGestureRecognizerStateChanged && panRecognizer.numberOfTouches >= 2)
+    {
+        CGPoint touchPoint = [panRecognizer locationInView:self.view];
+        GLKMatrix4 modelviewMatrix = GLKMatrix4Multiply(_viewMatrix, _modelMatrix);
+        GLKVector3 panAnchorPoint = screenToWorld(_panAnchorPoint, self.view.bounds.size, self.effect, modelviewMatrix);
+        GLKVector3 worldTouchPoint = screenToWorld(touchPoint, self.view.bounds.size, self.effect, modelviewMatrix);
+        GLKVector3 additionalPan = GLKVector3Make((panAnchorPoint.x - worldTouchPoint.x),
+                                                  (panAnchorPoint.y - worldTouchPoint.y),
+                                                  (panAnchorPoint.z - worldTouchPoint.z));
+        _totalPan = GLKVector3Add(_totalPan, additionalPan);
+        _panAnchorPoint = touchPoint;
+    }
 }
 
 - (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event
@@ -380,7 +403,7 @@ static inline void printQuaternion(GLKQuaternion quaternion)
 - (void)touchesMoved:(NSSet *)touches withEvent:(UIEvent *)event
 {
     UITouch *touch = [touches anyObject];
-    if (touches.count == 1)
+    if (touches.count == 1 && event.allTouches.count == 1)
     {
         // Single finger dragging will trigger rotation.
         CGPoint currentTouchPoint = [touch locationInView:self.view];
@@ -427,7 +450,6 @@ static inline void printQuaternion(GLKQuaternion quaternion)
              self.deviceMotionIconView = nil;
          }];
     }
-    _rotationRate = 0;
     if (touch.tapCount == 2)
     {
         [self animateToInitialPerspective];
@@ -438,15 +460,20 @@ static inline void printQuaternion(GLKQuaternion quaternion)
     }
 }
 
-static inline GLKVector3 screenToWorld(CGPoint screenPoint, CGSize screenSize, GLKBaseEffect *effect, GLKMatrix4 modelviewMatrix, GLint *viewport)
+
+static inline GLKVector3 screenToWorld(CGPoint screenPoint, CGSize screenSize, GLKBaseEffect *effect, GLKMatrix4 modelviewMatrix)
 {
     screenPoint.y = screenSize.height - screenPoint.y;
+    GLint viewport[4];
+    viewport[0] = 0;
+    viewport[1] = 0;
+    viewport[2] = screenSize.width;
+    viewport[3] = screenSize.height;
     
     GLKVector3 worldZero = GLKMathProject(GLKVector3Make(0.0f, 0.0f, 0.0f),
                                           modelviewMatrix,
                                           effect.transform.projectionMatrix,
                                           viewport);
-    
     bool success;
     GLKVector3 vector = GLKMathUnproject(GLKVector3Make(screenPoint.x, screenPoint.y, worldZero.z),
                                          modelviewMatrix,
@@ -455,20 +482,10 @@ static inline GLKVector3 screenToWorld(CGPoint screenPoint, CGSize screenSize, G
                                          &success);
     if (!success)
     {
-        VLog(@"Error unprojecting!");
+        vector = GLKVector3Make(nan(""), nan(""), nan(""));
     }
     
     return vector;
-}
-
-static inline GLKVector3 worldToScreen(GLKVector3 worldPoint, CGSize screenSize)
-{
-    GLKMatrix4 modelViewMatrix, projectionMatrix;
-    glGetFloatv(GL_MODELVIEW_MATRIX, modelViewMatrix.m);
-    glGetFloatv(GL_PROJECTION_MATRIX, projectionMatrix.m);
-    GLKVector3 screenVector = GLKMatrix4MultiplyVector3(GLKMatrix4Multiply(modelViewMatrix, projectionMatrix), worldPoint);
-    VLog(@"%f, %f, %f", screenVector.x, screenVector.y, screenVector.z);
-    return screenVector;
 }
 
 #pragma mark - Animation
@@ -477,8 +494,10 @@ static inline GLKVector3 worldToScreen(GLKVector3 worldPoint, CGSize screenSize)
 {
     self.view.userInteractionEnabled = NO;
     _scaleAnimationAttributes = MSHAnimationAttributesMake(_scale, 1.0f, ANIMATION_LENGTH);
-    _panXAnimationAttributes = MSHAnimationAttributesMake(_panX, 0.0f, ANIMATION_LENGTH);
-    _panYAnimationAttributes = MSHAnimationAttributesMake(_panY, 0.0f, ANIMATION_LENGTH);
+    _panXAnimationAttributes = MSHAnimationAttributesMake(_totalPan.x, 0.0f, ANIMATION_LENGTH);
+    _panYAnimationAttributes = MSHAnimationAttributesMake(_totalPan.y, 0.0f, ANIMATION_LENGTH);
+    float quaternionAngle = GLKQuaternionAngle(_totalQuaternion);
+    _quaternionAnimationAttributes = MSHAnimationAttributesMake(quaternionAngle, 0.0f, ANIMATION_LENGTH);
 }
 
 static inline MSHAnimationAttributes MSHAnimationAttributesMake(float startValue, float endValue, float animationLength)
@@ -523,44 +542,27 @@ static inline BOOL applyAnimationAttributes(float *attribute, MSHAnimationAttrib
     return animationDone;
 }
 
-- (void)decelerateRotation:(NSTimer *)timer
-{
-    if (fabsf(_rotationRate) < ROTATION_DECELERATION_RATE)
-    {
-        [timer invalidate];
-        _rotationRate = 0;
-    }
-    else if (_rotationRate > 0)
-    {
-        _rotationRate -= ROTATION_DECELERATION_RATE;
-    }
-    else
-    {
-        _rotationRate += ROTATION_DECELERATION_RATE;
-    }
-}
-
 #pragma mark - OpenGL drawing
 
 - (void)update
 {
-    // Process the rotation rate
-    /*
-    double deviceRotationRate = self.motionManager.deviceMotion.rotationRate.y;
-    if (fabsf(deviceRotationRate) > 8)
-    {
-        _rotationRate = deviceRotationRate;
-        [NSTimer scheduledTimerWithTimeInterval:.03 target:self selector:@selector(decelerateRotation:) userInfo:nil repeats:YES];
-    }
-     */
-    GLKQuaternion finalQuaternion = GLKQuaternionMultiply(_currentRotationQuaternion, _totalQuaternion);
-    GLKMatrix4 turnedModelMatrix = GLKMatrix4Multiply(GLKMatrix4MakeWithQuaternion(finalQuaternion), _modelMatrix);
-    GLKMatrix4 translatedTurnedModelMatrix = GLKMatrix4Multiply(GLKMatrix4MakeTranslation(-_panX, -_panY, -_panZ), turnedModelMatrix);
-    GLKMatrix4 viewMatrix = GLKMatrix4MakeLookAt(0.0f, 0.0f, _eyeZ,
-                                                 0.0f, 0.0f, 0.0f,
-                                                 0.0f, 1.0f, 0.0f);
-    
+    GLKQuaternion finalQuaternion = [self totalQuaternion];
     float timeSinceLastUpdate = self.timeSinceLastUpdate;
+    float oldQuaternionAngle = GLKQuaternionAngle(finalQuaternion);
+    float newQuaternionAngle = oldQuaternionAngle;
+    BOOL quaternionAnimationFinished = applyAnimationAttributes(&newQuaternionAngle, &_quaternionAnimationAttributes, timeSinceLastUpdate);
+    finalQuaternion = GLKQuaternionMakeWithAngleAndVector3Axis(newQuaternionAngle, GLKQuaternionAxis(finalQuaternion));
+    if (oldQuaternionAngle != newQuaternionAngle)
+    {
+        _totalQuaternion = finalQuaternion;
+    }
+    _modelTransforms = GLKMatrix4Multiply(GLKMatrix4MakeTranslation(-_totalPan.x, -_totalPan.y, -_totalPan.z),
+                                          GLKMatrix4Multiply(GLKMatrix4MakeScale(_scale*_currentScale, _scale*_currentScale, _scale*_currentScale),
+                                                             GLKMatrix4MakeWithQuaternion(finalQuaternion)));
+    GLKMatrix4 transformedModelMatrix = GLKMatrix4Multiply(_modelTransforms, _modelMatrix);
+    GLKMatrix4 viewMatrix = GLKMatrix4MakeLookAt(0, 0, _eyeZ,
+                                                 0, 0, 0,
+                                                 0.0f, 1.0f, 0.0f);
     if (self.referenceAttitude)
     {
         // The accelerometer is controlling the view matrix
@@ -584,15 +586,14 @@ static inline BOOL applyAnimationAttributes(float *attribute, MSHAnimationAttrib
         if (_animatingEulerAngles.pitch)
             viewMatrix = GLKMatrix4Multiply(GLKMatrix4MakeRotation(_animatingEulerAngles.pitch, -1.0f, 0.0f, 0.0f), viewMatrix);
     }
-    self.effect.transform.modelviewMatrix = GLKMatrix4Multiply(viewMatrix, translatedTurnedModelMatrix);
-    self.effect.transform.projectionMatrix = GLKMatrix4MakePerspective(CAM_VERT_ANGLE/_scale, _aspect, _nearZ, _farZ);
-    
-    _rotation += timeSinceLastUpdate * _rotationRate;
+    _viewMatrix = viewMatrix;
+    self.effect.transform.modelviewMatrix = GLKMatrix4Multiply(_viewMatrix, transformedModelMatrix);
+    self.effect.transform.projectionMatrix = GLKMatrix4MakePerspective(CAM_VERT_ANGLE, _aspect, _nearZ, _farZ);
     
     BOOL scaleAnimationFinished = applyAnimationAttributes(&_scale, &_scaleAnimationAttributes, timeSinceLastUpdate);
-    BOOL panYAnimationFinished = applyAnimationAttributes(&_panY, &_panYAnimationAttributes, timeSinceLastUpdate);
-    BOOL panXAnimationFinished = applyAnimationAttributes(&_panX, &_panXAnimationAttributes, timeSinceLastUpdate);
-    self.view.userInteractionEnabled = scaleAnimationFinished && panYAnimationFinished && panXAnimationFinished &&
+    BOOL panXAnimationFinished = applyAnimationAttributes(&_totalPan.x, &_panXAnimationAttributes, timeSinceLastUpdate);
+    BOOL panYAnimationFinished = applyAnimationAttributes(&_totalPan.y, &_panYAnimationAttributes, timeSinceLastUpdate);
+    self.view.userInteractionEnabled = scaleAnimationFinished && panYAnimationFinished && panXAnimationFinished && quaternionAnimationFinished &&
     !_animatingEulerAngles.yaw && !_animatingEulerAngles.roll && !_animatingEulerAngles.pitch;
 }
 
@@ -619,16 +620,55 @@ static inline BOOL applyAnimationAttributes(float *attribute, MSHAnimationAttrib
     }
 }
 
-#pragma mark - MSHRendererViewControllerDelegate
+#pragma mark - Quaternion Rotation Helpers
 
-- (void)rendererChangedStatus:(MSHRendererViewControllerStatus)newStatus
+- (GLKMatrix4)totalRotationMatrix
 {
-    
+    return GLKMatrix4MakeWithQuaternion([self totalQuaternion]);
 }
 
-- (void)rendererEncounteredError:(NSError *)error
+- (GLKQuaternion)totalQuaternion
 {
+    return GLKQuaternionMultiply(_currentRotationQuaternion, _totalQuaternion);
+}
+
+static inline GLKVector3 mapTouchToSphere(CGSize viewSize, CGPoint touchCoordinates)
+{
+    CGFloat sphereRadius = MIN(viewSize.width, viewSize.height)/2.0f;
+    GLKVector3 xyCenter = GLKVector3Make(viewSize.width/2, viewSize.height/2, 0);
+    GLKVector3 touchVectorFromCenter = GLKVector3Subtract(GLKVector3Make(touchCoordinates.x, touchCoordinates.y, 0), xyCenter);
+    touchVectorFromCenter = GLKVector3Make(touchVectorFromCenter.x, -touchVectorFromCenter.y, touchVectorFromCenter.z);
     
+    GLfloat radiusSquared = sphereRadius*sphereRadius;
+    GLfloat xyLengthSquared = touchVectorFromCenter.x*touchVectorFromCenter.x + touchVectorFromCenter.y*touchVectorFromCenter.y;
+    
+    // Pythagoras has entered the building
+    if (radiusSquared >= xyLengthSquared)
+        touchVectorFromCenter.z = sqrt(radiusSquared - xyLengthSquared);
+    else
+    {
+        touchVectorFromCenter.x *= radiusSquared/sqrt(xyLengthSquared);
+        touchVectorFromCenter.y *= radiusSquared/sqrt(xyLengthSquared);
+        touchVectorFromCenter.z = 0;
+    }
+    return GLKVector3Normalize(touchVectorFromCenter);
+}
+
+static inline GLKQuaternion getQuaternion(GLKVector3 unitVector1, GLKVector3 unitVector2)
+{
+    GLKVector3 axis = GLKVector3CrossProduct(unitVector1, unitVector2);
+    GLfloat angle = acosf(GLKVector3DotProduct(unitVector1, unitVector2));
+    GLKQuaternion result = GLKQuaternionMakeWithAngleAndVector3Axis(angle, axis);
+    if (result.w != 1)
+        result = GLKQuaternionNormalize(result);
+    return result;
+}
+
+static inline void printQuaternion(GLKQuaternion quaternion)
+{
+    GLKVector3 axis = GLKQuaternionAxis(quaternion);
+    float angle = GLKQuaternionAngle(quaternion);
+    VLog(@"(%f, %f, %f) %f", axis.x, axis.y, axis.z, angle);
 }
 
 #pragma mark - Misc. Helpers
@@ -656,6 +696,19 @@ static inline void getRGBA(UIColor *color, CGFloat *colorComponents)
             NSCAssert(NO, @"Unsupported color space: %d", colorSpaceModel);
             break;
     }
+}
+
+
+#pragma mark - MSHRendererViewControllerDelegate
+
+- (void)rendererChangedStatus:(MSHRendererViewControllerStatus)newStatus
+{
+    
+}
+
+- (void)rendererEncounteredError:(NSError *)error
+{
+    
 }
 
 @end
