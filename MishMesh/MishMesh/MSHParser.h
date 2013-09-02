@@ -21,6 +21,7 @@ typedef enum MSHParseError
     MSHParseErrorInvalidNormalDefinition,
     MSHParseErrorInvalidFaceDefinition,
     MSHParseErrorVertexNumberLimitExceeded,
+    MSHParseErrorNoGeometry,
     MSHParseErrorUnknown
 } MSHParseError;
 

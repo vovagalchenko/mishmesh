@@ -92,14 +92,6 @@
 			<key>MMSModelNumFaces</key>
 			<integer>16917</integer>
 		</dict>
-		<dict>
-			<key>MMSModelName</key>
-			<string>Avent</string>
-			<key>MMSModelURL</key>
-			<string>https://cloud.box.com/shared/static/2p9exny4dat6ooqm13rf.obj</string>
-			<key>MMSModelNumFaces</key>
-			<integer>169735</integer>
-		</dict>
 	</array>
 </dict>
 </plist>
