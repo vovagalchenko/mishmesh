@@ -35,20 +35,30 @@
 
 #define PINCH_ANCHOR_TOLERANCE                                  2.0f
 
+#define DEFAULT_MESH_COLOR                                      [UIColor colorWithRed:0.7f green:0.2f blue:0.2f alpha:1.0f]
+#define DEFAULT_BACKGROUND_COLOR                                [UIColor colorWithRed:212.0/255.0 green:209.0/255.0 blue:187.0/255.0 alpha:1.0]
+
 typedef struct MSHAnimationAttributes
 {
     float rateOfChange;
     float targetRateOfChange;
     float changeAcceleration;
     float targetValue;
+    bool targetValueNotSignificant;
 } MSHAnimationAttributes;
 
-typedef struct EulerAngles
+typedef struct MSHEulerAngles
 {
     float yaw;
     float pitch;
     float roll;
-} EulerAngles;
+} MSHEulerAngles;
+
+typedef struct MSHQuaternionSnapshot
+{
+    GLKQuaternion quaternion;
+    NSTimeInterval time;
+} MSHQuaternionSnapshot;
 
 @interface MSHRendererViewController()
 {
@@ -69,11 +79,15 @@ typedef struct EulerAngles
     MSHAnimationAttributes _yawAnimationAttributes;
     MSHAnimationAttributes _rollAnimationAttributes;
     MSHAnimationAttributes _quaternionAnimationAttributes;
-    EulerAngles _animatingEulerAngles;
+    MSHAnimationAttributes _quaternionInertialAnimationAttributes;
+    MSHEulerAngles _animatingEulerAngles;
     
     CGPoint _quaternionAnchorPoint;
     GLKQuaternion _currentRotationQuaternion;
     GLKQuaternion _totalQuaternion;
+    MSHQuaternionSnapshot _currentQuaternionSnapshot;
+    float _angleRateOfChangeDueToDrag;
+    GLKVector3 _inertialQuaternionAxis;
     
     CGPoint _panAnchorPoint;
     GLKVector3 _totalPan;
@@ -88,6 +102,8 @@ typedef struct EulerAngles
 @property (strong, nonatomic) CMMotionManager *motionManager;
 @property (strong, nonatomic) CMAttitude *referenceAttitude;
 @property (strong, nonatomic) MSHDeviceMotionIconView *deviceMotionIconView;
+@property (strong, nonatomic) UIPanGestureRecognizer *panGestureRecognizer;
+@property (strong, nonatomic) UIPanGestureRecognizer *rotationGestureRecognizer;
 
 @end
 
@@ -105,7 +121,8 @@ typedef struct EulerAngles
     if (self = [super init])
     {
         self.rendererDelegate = rendererDelegate;
-        self.meshColor = [UIColor colorWithRed:0.7f green:0.2f blue:0.2f alpha:1.0f];
+        self.meshColor = DEFAULT_MESH_COLOR;
+        self.inertiaDampeningRate = 2;
     }
     return self;
 }
@@ -117,7 +134,7 @@ typedef struct EulerAngles
     self.context = [[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES2];
     GLKView *view = (GLKView *)self.view;
     self.view.opaque = YES;
-    self.view.backgroundColor = [UIColor colorWithRed:212.0/255.0 green:209.0/255.0 blue:187.0/255.0 alpha:1.0];
+    self.view.backgroundColor = DEFAULT_BACKGROUND_COLOR;
     view.context = self.context;
     view.drawableDepthFormat = GLKViewDrawableDepthFormat16;
     view.drawableMultisample = GLKViewDrawableMultisample4X;
@@ -137,11 +154,17 @@ typedef struct EulerAngles
     self.motionManager = [[CMMotionManager alloc] init];
     [self.motionManager startDeviceMotionUpdates];
     
-    [self.view addGestureRecognizer:[[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(handlePinch:)]];
-    [self.view addGestureRecognizer:[[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(handleLongPress:)]];
-    UIPanGestureRecognizer *panRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
-    panRecognizer.minimumNumberOfTouches = 2;
-    [self.view addGestureRecognizer:panRecognizer];
+    [self.view addGestureRecognizer:setUpGestureRecognizer([[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(handlePinch:)])];
+    UILongPressGestureRecognizer *longPressRecognizer = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(handleLongPress:)];
+    setUpGestureRecognizer(longPressRecognizer);
+    longPressRecognizer.cancelsTouchesInView = YES;
+    [self.view addGestureRecognizer:longPressRecognizer];
+    self.panGestureRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
+    self.panGestureRecognizer.minimumNumberOfTouches = 2;
+    [self.view addGestureRecognizer:setUpGestureRecognizer(self.panGestureRecognizer)];
+    self.rotationGestureRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
+    self.rotationGestureRecognizer.maximumNumberOfTouches = 1;
+    [self.view addGestureRecognizer:setUpGestureRecognizer(self.rotationGestureRecognizer)];
 }
 
 - (BOOL)shouldAutorotate
@@ -287,6 +310,19 @@ typedef struct EulerAngles
 
 #pragma mark - Handling User Input
 
+- (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event
+{
+    // Cancel animations
+    memset(&_scaleAnimationAttributes, 0, sizeof(_scaleAnimationAttributes));
+    memset(&_panXAnimationAttributes, 0, sizeof(_panXAnimationAttributes));
+    memset(&_panYAnimationAttributes, 0, sizeof(_panYAnimationAttributes));
+    memset(&_pitchAnimationAttributes, 0, sizeof(_pitchAnimationAttributes));
+    memset(&_yawAnimationAttributes, 0, sizeof(_yawAnimationAttributes));
+    memset(&_rollAnimationAttributes, 0, sizeof(_rollAnimationAttributes));
+    memset(&_quaternionAnimationAttributes, 0, sizeof(_quaternionAnimationAttributes));
+    memset(&_quaternionInertialAnimationAttributes, 0, sizeof(_quaternionAnimationAttributes));
+}
+
 - (void)handlePinch:(UIPinchGestureRecognizer *)pinchGestureRecognizer
 {
     GLKMatrix4 transformsExceptRotation = GLKMatrix4Multiply(_modelTransforms, GLKMatrix4Invert([self totalRotationMatrix], NULL));
@@ -368,54 +404,75 @@ static inline CGFloat getDistance(CGPoint point1, CGPoint point2)
     {
         self.referenceAttitude = self.motionManager.deviceMotion.attitude;
         [UIView animateWithDuration:ANIMATION_LENGTH animations:^
-         {
+        {
+            self.deviceMotionIconView.bounds = CGRectMake(0, 0, DIMENSION_OF_DEVICE_MOTION_ICON, DIMENSION_OF_DEVICE_MOTION_ICON);
              self.deviceMotionIconView.frame = CGRectMake(DEVICE_MOTION_ICON_RESTING_X, DEVICE_MOTION_ICON_RESTING_Y,
                                                           DIMENSION_OF_DEVICE_MOTION_ICON, DIMENSION_OF_DEVICE_MOTION_ICON);
-         }];
+        }];
+        self.deviceMotionIconView.frame = CGRectMake(DEVICE_MOTION_ICON_RESTING_X, DEVICE_MOTION_ICON_RESTING_Y,
+                                                     DIMENSION_OF_DEVICE_MOTION_ICON, DIMENSION_OF_DEVICE_MOTION_ICON);
     }
 }
 
 - (void)handlePan:(UIPanGestureRecognizer *)panRecognizer
 {
-    if ([panRecognizer state] == UIGestureRecognizerStateBegan)
+    if (panRecognizer == self.panGestureRecognizer && panRecognizer.numberOfTouches >= 2)
     {
-        _panAnchorPoint = [panRecognizer locationInView:self.view];
-    }
-    else if ([panRecognizer state] == UIGestureRecognizerStateChanged && panRecognizer.numberOfTouches >= 2)
-    {
-        CGPoint touchPoint = [panRecognizer locationInView:self.view];
-        GLKMatrix4 modelviewMatrix = GLKMatrix4Multiply(_viewMatrix, _modelMatrix);
-        GLKVector3 panAnchorPoint = screenToWorld(_panAnchorPoint, self.view.bounds.size, self.effect, modelviewMatrix);
-        GLKVector3 worldTouchPoint = screenToWorld(touchPoint, self.view.bounds.size, self.effect, modelviewMatrix);
-        GLKVector3 additionalPan = GLKVector3Make((panAnchorPoint.x - worldTouchPoint.x),
-                                                  (panAnchorPoint.y - worldTouchPoint.y),
-                                                  (panAnchorPoint.z - worldTouchPoint.z));
-        _totalPan = GLKVector3Add(_totalPan, additionalPan);
-        _panAnchorPoint = touchPoint;
-    }
-}
-
-- (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event
-{
-    _quaternionAnchorPoint = [[touches anyObject] locationInView:self.view];
-}
-
-- (void)touchesMoved:(NSSet *)touches withEvent:(UIEvent *)event
-{
-    UITouch *touch = [touches anyObject];
-    if (touches.count == 1 && event.allTouches.count == 1)
-    {
-        // Single finger dragging will trigger rotation.
-        CGPoint currentTouchPoint = [touch locationInView:self.view];
-        GLKVector3 currentTouchSphereVector = mapTouchToSphere(self.view.bounds.size, currentTouchPoint);
-        GLKVector3 previousTouchSphereVector = mapTouchToSphere(self.view.bounds.size, _quaternionAnchorPoint);
-        
-        _currentRotationQuaternion = getQuaternion(previousTouchSphereVector, currentTouchSphereVector);
-        // The axis of rotation is undefined when the quaternion angle becomes M_PI.
-        // We'll flush the current quaternion when the angle get to M_PI/2.
-        if (GLKQuaternionAngle(_currentRotationQuaternion) >= M_PI_2)
+        if ([panRecognizer state] == UIGestureRecognizerStateBegan)
         {
-            [self flushCurrenQuaternionWithNewAnchorPoint:currentTouchPoint];
+            _panAnchorPoint = [panRecognizer locationInView:self.view];
+        }
+        else if ([panRecognizer state] == UIGestureRecognizerStateChanged)
+        {
+            CGPoint touchPoint = [panRecognizer locationInView:self.view];
+            GLKMatrix4 modelviewMatrix = GLKMatrix4Multiply(_viewMatrix, _modelMatrix);
+            GLKVector3 panAnchorPoint = screenToWorld(_panAnchorPoint, self.view.bounds.size, self.effect, modelviewMatrix);
+            GLKVector3 worldTouchPoint = screenToWorld(touchPoint, self.view.bounds.size, self.effect, modelviewMatrix);
+            GLKVector3 additionalPan = GLKVector3Make((panAnchorPoint.x - worldTouchPoint.x),
+                                                      (panAnchorPoint.y - worldTouchPoint.y),
+                                                      (panAnchorPoint.z - worldTouchPoint.z));
+            _totalPan = GLKVector3Add(_totalPan, additionalPan);
+            _panAnchorPoint = touchPoint;
+        }
+    }
+    else if (panRecognizer == self.rotationGestureRecognizer)
+    {
+        if ([panRecognizer state] == UIGestureRecognizerStateBegan)
+        {
+            _quaternionAnchorPoint = [panRecognizer locationOfTouch:0 inView:self.view];
+        }
+        else if ([panRecognizer state] == UIGestureRecognizerStateChanged)
+        {
+            // Single finger dragging will trigger rotation.
+            CGPoint currentTouchPoint = [panRecognizer locationOfTouch:0 inView:self.view];
+            GLKVector3 currentTouchSphereVector = mapTouchToSphere(self.view.bounds.size, currentTouchPoint);
+            GLKVector3 previousTouchSphereVector = mapTouchToSphere(self.view.bounds.size, _quaternionAnchorPoint);
+            
+            _currentRotationQuaternion = getQuaternion(previousTouchSphereVector, currentTouchSphereVector);
+            float currentAngle = GLKQuaternionAngle(_currentRotationQuaternion);
+            
+            GLKQuaternion diffQuaternion = GLKQuaternionMultiply(GLKQuaternionMake(-_currentQuaternionSnapshot.quaternion.x,
+                                                                                   -_currentQuaternionSnapshot.quaternion.y,
+                                                                                   -_currentQuaternionSnapshot.quaternion.z,
+                                                                                   _currentQuaternionSnapshot.quaternion.w), _currentRotationQuaternion);
+            NSDate *now = [NSDate date];
+            _angleRateOfChangeDueToDrag = GLKQuaternionAngle(diffQuaternion)/([now timeIntervalSince1970] - _currentQuaternionSnapshot.time);
+            _inertialQuaternionAxis = GLKQuaternionAxis(_currentRotationQuaternion);
+            
+            // The axis of rotation is undefined when the quaternion angle becomes M_PI.
+            // We'll flush the current quaternion when the angle get to M_PI/2.
+            if (currentAngle >= M_PI_2)
+            {
+                [self flushCurrenQuaternionWithNewAnchorPoint:currentTouchPoint];
+            }
+            
+            _currentQuaternionSnapshot = MSHQuaternionSnapshotMake(_currentRotationQuaternion);
+        }
+        else if ([panRecognizer state] == UIGestureRecognizerStateEnded ||
+                 [panRecognizer state] == UIGestureRecognizerStateCancelled)
+        {
+            [self flushCurrenQuaternionWithNewAnchorPoint:CGPointMake(0, 0)];
+            _quaternionInertialAnimationAttributes = MSHAnimationAttributesMakeInertial(_angleRateOfChangeDueToDrag, self.inertiaDampeningRate);
         }
     }
 }
@@ -454,10 +511,6 @@ static inline CGFloat getDistance(CGPoint point1, CGPoint point2)
     {
         [self animateToInitialPerspective];
     }
-    if ([touches count] == 1)
-    {
-        [self flushCurrenQuaternionWithNewAnchorPoint:CGPointMake(0, 0)];
-    }
 }
 
 
@@ -492,7 +545,6 @@ static inline GLKVector3 screenToWorld(CGPoint screenPoint, CGSize screenSize, G
 
 - (void)animateToInitialPerspective
 {
-    self.view.userInteractionEnabled = NO;
     _scaleAnimationAttributes = MSHAnimationAttributesMake(_scale, 1.0f, ANIMATION_LENGTH);
     _panXAnimationAttributes = MSHAnimationAttributesMake(_totalPan.x, 0.0f, ANIMATION_LENGTH);
     _panYAnimationAttributes = MSHAnimationAttributesMake(_totalPan.y, 0.0f, ANIMATION_LENGTH);
@@ -508,14 +560,30 @@ static inline MSHAnimationAttributes MSHAnimationAttributesMake(float startValue
     animationAttributes.rateOfChange = 0;
     animationAttributes.changeAcceleration = animationAttributes.targetRateOfChange/(animationLength/2);
     animationAttributes.targetValue = endValue;
+    animationAttributes.targetValueNotSignificant = NO;
     return animationAttributes;
+}
+
+static inline MSHAnimationAttributes MSHAnimationAttributesMakeInertial(float currentRateOfChange, float inertiaDampeningRate)
+{
+    MSHAnimationAttributes animationAttributes;
+    animationAttributes.targetRateOfChange = 0;
+    animationAttributes.rateOfChange = currentRateOfChange;
+    animationAttributes.changeAcceleration = -(currentRateOfChange/currentRateOfChange)*currentRateOfChange*inertiaDampeningRate;
+    animationAttributes.targetValueNotSignificant = YES;
+    return animationAttributes;
+}
+
+static inline BOOL MSHAnimationAttributesAreIntertial(MSHAnimationAttributes animationAttributes)
+{
+    return animationAttributes.targetValueNotSignificant;
 }
 
 static inline BOOL applyAnimationAttributes(float *attribute, MSHAnimationAttributes *animationAttributes, NSTimeInterval timeSinceLastUpdate)
 {
     BOOL animationDone = NO;
     if (fabsf((*animationAttributes).targetRateOfChange - (*animationAttributes).rateOfChange) > fabsf(timeSinceLastUpdate*(*animationAttributes).changeAcceleration) &&
-        fabsf(*attribute - (*animationAttributes).targetValue) > fabsf(timeSinceLastUpdate*(*animationAttributes).rateOfChange))
+        ((*animationAttributes).targetValueNotSignificant || fabsf(*attribute - (*animationAttributes).targetValue) > fabsf(timeSinceLastUpdate*(*animationAttributes).rateOfChange)))
     {
         (*animationAttributes).rateOfChange += timeSinceLastUpdate*(*animationAttributes).changeAcceleration;
     }
@@ -528,7 +596,7 @@ static inline BOOL applyAnimationAttributes(float *attribute, MSHAnimationAttrib
     }
     else if ((*animationAttributes).changeAcceleration)
     {
-        *attribute = (*animationAttributes).targetValue;
+        if (!(*animationAttributes).targetValueNotSignificant) *attribute = (*animationAttributes).targetValue;
         animationDone = YES;
         memset(animationAttributes, 0, sizeof(*animationAttributes));
     }
@@ -546,15 +614,31 @@ static inline BOOL applyAnimationAttributes(float *attribute, MSHAnimationAttrib
 
 - (void)update
 {
-    GLKQuaternion finalQuaternion = [self totalQuaternion];
+    GLKQuaternion preinertialQuaternion = [self preinertialQuaternion];
     float timeSinceLastUpdate = self.timeSinceLastUpdate;
-    float oldQuaternionAngle = GLKQuaternionAngle(finalQuaternion);
+    float oldQuaternionAngle = GLKQuaternionAngle(preinertialQuaternion);
     float newQuaternionAngle = oldQuaternionAngle;
-    BOOL quaternionAnimationFinished = applyAnimationAttributes(&newQuaternionAngle, &_quaternionAnimationAttributes, timeSinceLastUpdate);
-    finalQuaternion = GLKQuaternionMakeWithAngleAndVector3Axis(newQuaternionAngle, GLKQuaternionAxis(finalQuaternion));
+    applyAnimationAttributes(&newQuaternionAngle, &_quaternionAnimationAttributes, timeSinceLastUpdate);
+    preinertialQuaternion = GLKQuaternionMakeWithAngleAndVector3Axis(newQuaternionAngle, GLKQuaternionAxis(preinertialQuaternion));
     if (oldQuaternionAngle != newQuaternionAngle)
     {
-        _totalQuaternion = finalQuaternion;
+        _totalQuaternion = preinertialQuaternion;
+    }
+    float inertialAngle = 0;
+    applyAnimationAttributes(&inertialAngle, &_quaternionInertialAnimationAttributes, timeSinceLastUpdate);
+    GLKQuaternion finalQuaternion;
+    if (inertialAngle)
+    {
+        if (inertialAngle >= 2*M_PI)
+        {
+            inertialAngle -= 2*M_PI;
+        }
+        _totalQuaternion = GLKQuaternionMultiply(GLKQuaternionMakeWithAngleAndVector3Axis(inertialAngle, _inertialQuaternionAxis), _totalQuaternion);
+        finalQuaternion = _totalQuaternion;
+    }
+    else
+    {
+        finalQuaternion = preinertialQuaternion;
     }
     _modelTransforms = GLKMatrix4Multiply(GLKMatrix4MakeTranslation(-_totalPan.x, -_totalPan.y, -_totalPan.z),
                                           GLKMatrix4Multiply(GLKMatrix4MakeScale(_scale*_currentScale, _scale*_currentScale, _scale*_currentScale),
@@ -590,11 +674,9 @@ static inline BOOL applyAnimationAttributes(float *attribute, MSHAnimationAttrib
     self.effect.transform.modelviewMatrix = GLKMatrix4Multiply(_viewMatrix, transformedModelMatrix);
     self.effect.transform.projectionMatrix = GLKMatrix4MakePerspective(CAM_VERT_ANGLE, _aspect, _nearZ, _farZ);
     
-    BOOL scaleAnimationFinished = applyAnimationAttributes(&_scale, &_scaleAnimationAttributes, timeSinceLastUpdate);
-    BOOL panXAnimationFinished = applyAnimationAttributes(&_totalPan.x, &_panXAnimationAttributes, timeSinceLastUpdate);
-    BOOL panYAnimationFinished = applyAnimationAttributes(&_totalPan.y, &_panYAnimationAttributes, timeSinceLastUpdate);
-    self.view.userInteractionEnabled = scaleAnimationFinished && panYAnimationFinished && panXAnimationFinished && quaternionAnimationFinished &&
-    !_animatingEulerAngles.yaw && !_animatingEulerAngles.roll && !_animatingEulerAngles.pitch;
+    applyAnimationAttributes(&_scale, &_scaleAnimationAttributes, timeSinceLastUpdate);
+    applyAnimationAttributes(&_totalPan.x, &_panXAnimationAttributes, timeSinceLastUpdate);
+    applyAnimationAttributes(&_totalPan.y, &_panYAnimationAttributes, timeSinceLastUpdate);
 }
 
 - (void)glkView:(GLKView *)view drawInRect:(CGRect)rect
@@ -624,10 +706,10 @@ static inline BOOL applyAnimationAttributes(float *attribute, MSHAnimationAttrib
 
 - (GLKMatrix4)totalRotationMatrix
 {
-    return GLKMatrix4MakeWithQuaternion([self totalQuaternion]);
+    return GLKMatrix4MakeWithQuaternion([self preinertialQuaternion]);
 }
 
-- (GLKQuaternion)totalQuaternion
+- (GLKQuaternion)preinertialQuaternion
 {
     return GLKQuaternionMultiply(_currentRotationQuaternion, _totalQuaternion);
 }
@@ -664,6 +746,14 @@ static inline GLKQuaternion getQuaternion(GLKVector3 unitVector1, GLKVector3 uni
     return result;
 }
 
+static inline MSHQuaternionSnapshot MSHQuaternionSnapshotMake(GLKQuaternion q)
+{
+    MSHQuaternionSnapshot snapshot;
+    snapshot.quaternion = q;
+    snapshot.time = [[NSDate date] timeIntervalSince1970];
+    return snapshot;
+}
+
 static inline void printQuaternion(GLKQuaternion quaternion)
 {
     GLKVector3 axis = GLKQuaternionAxis(quaternion);
@@ -696,6 +786,13 @@ static inline void getRGBA(UIColor *color, CGFloat *colorComponents)
             NSCAssert(NO, @"Unsupported color space: %d", colorSpaceModel);
             break;
     }
+}
+
+static inline UIGestureRecognizer *setUpGestureRecognizer(UIGestureRecognizer *recognizer)
+{
+    recognizer.delaysTouchesBegan = NO;
+    recognizer.cancelsTouchesInView = NO;
+    return recognizer;
 }
 
 

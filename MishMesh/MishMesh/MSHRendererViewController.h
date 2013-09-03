@@ -35,5 +35,6 @@ typedef enum MSHRendererViewControllerStatus
 
 @property (nonatomic, weak) id<MSHRendererViewControllerDelegate>rendererDelegate;
 @property (nonatomic, strong) UIColor *meshColor;
+@property (nonatomic, assign) float inertiaDampeningRate;
 
 @end
