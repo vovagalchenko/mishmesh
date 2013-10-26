@@ -154,8 +154,10 @@
                                     MSHVertex *vertex = [tmpVertices objectAtIndex:vertexIndex];
                                     unsigned int suggestedIndex = vertices.count;
                                     id normalId = [NSNull null];
+                                    // obj specification allows vertex normals to be specified explicitly or implicitly.
                                     if (vertexDefinitionComponents.count == 3)
                                     {
+                                        // The vertex coordinate was specified explicitly via the "vn" directive.
                                         NSInteger normalIndex = [[vertexDefinitionComponents objectAtIndex:2] integerValue];
                                         normalIndex = getIndex(tmpNormals, normalIndex);
                                         normalId = [tmpNormals objectAtIndex:normalIndex];
@@ -163,14 +165,18 @@
                                     else
                                     {
                                         // The normal isn't specified. We're going to have to calculate vertices for this face.
+                                        // In order to do that, however, we need to gather the vertices for this face.
                                         if (!vertexesForNormalCalculation)
                                         {
                                             vertexesForNormalCalculation = [NSMutableArray array];
                                         }
                                     }
+                                    // Let's associate the previously specified vertex normal with this vertex.
+                                    // Note that if the vertex normal was not explicitly specified, for now the vertex normal for this vertex will be NSNull.
                                     [vertex addNormalWithNormalId:normalId suggestedIndex:&suggestedIndex];
                                     if (vertexesForNormalCalculation)
                                     {
+                                        // If we're going to be calculating vertex normals for this face, we'll gather the vertices inside vertexesForNormalCalculation.
                                         [vertexesForNormalCalculation addObject:vertex];
                                     }
                                     if (suggestedIndex == vertices.count)
