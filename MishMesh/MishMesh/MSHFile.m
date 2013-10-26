@@ -97,9 +97,9 @@
                             for (int j = 0; j < face.numVertices; j++)
                             {
                                 unsigned int verticeStartIndex = face.vertexIndices[j]*6;
-                                MSHVertex *vertex = [MSHVertex vertexWithX:self.vertexCoordinates[verticeStartIndex++]
-                                                                         y:self.vertexCoordinates[verticeStartIndex++]
-                                                                         z:self.vertexCoordinates[verticeStartIndex]];
+                                MSHVertex *vertex = [MSHVertex vertexWithX:self.vertexCoordinates[verticeStartIndex]
+                                                                         y:self.vertexCoordinates[verticeStartIndex + 1]
+                                                                         z:self.vertexCoordinates[verticeStartIndex + 2]];
                                 GLfloat distance = [centerVertex distanceToVertex:vertex];
                                 if (distance > maxDistance)
                                 {

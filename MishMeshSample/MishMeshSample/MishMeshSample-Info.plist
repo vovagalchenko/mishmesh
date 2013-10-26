@@ -24,74 +24,80 @@
 	<string>1.0</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>MMSModels</key>
+	<array>
+		<dict>
+			<key>MMSModelName</key>
+			<string>Catwoman</string>
+			<key>MMSModelNumFaces</key>
+			<integer>20092</integer>
+			<key>MMSModelURL</key>
+			<string>https://cloud.box.com/shared/static/xz0is2u6lw8ltzw91sh0.obj</string>
+		</dict>
+		<dict>
+			<key>MMSModelName</key>
+			<string>Praying Mantis</string>
+			<key>MMSModelNumFaces</key>
+			<integer>30510</integer>
+			<key>MMSModelURL</key>
+			<string>https://cloud.box.com/shared/static/n28prxplszixh70ef1g1.obj</string>
+		</dict>
+		<dict>
+			<key>MMSModelName</key>
+			<string>Grayson</string>
+			<key>MMSModelNumFaces</key>
+			<integer>43709</integer>
+			<key>MMSModelURL</key>
+			<string>https://cloud.box.com/shared/static/h3q7mcnwtqt7pyiw6ucy.obj</string>
+		</dict>
+		<dict>
+			<key>MMSModelName</key>
+			<string>Caribbean Princess</string>
+			<key>MMSModelNumFaces</key>
+			<integer>16019</integer>
+			<key>MMSModelURL</key>
+			<string>https://cloud.box.com/shared/static/7hiwtc2i9nurzr4ifag0.obj</string>
+		</dict>
+		<dict>
+			<key>MMSModelName</key>
+			<string>Maybach</string>
+			<key>MMSModelNumFaces</key>
+			<integer>71508</integer>
+			<key>MMSModelURL</key>
+			<string>https://cloud.box.com/shared/static/bdkdt0p2j03zuo5ki494.obj</string>
+		</dict>
+		<dict>
+			<key>MMSModelName</key>
+			<string>Harley</string>
+			<key>MMSModelNumFaces</key>
+			<integer>13765</integer>
+			<key>MMSModelURL</key>
+			<string>https://cloud.box.com/shared/static/vliu4gj1rishoz8bpqjb.obj</string>
+		</dict>
+		<dict>
+			<key>MMSModelName</key>
+			<string>Jill</string>
+			<key>MMSModelNumFaces</key>
+			<integer>16917</integer>
+			<key>MMSModelURL</key>
+			<string>https://cloud.box.com/shared/static/ock9d81kakj91dz1x4ea.obj</string>
+		</dict>
+	</array>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
 		<string>armv7</string>
 	</array>
+	<key>UIStatusBarHidden</key>
+	<true/>
+	<key>UIStatusBarStyle</key>
+	<string>UIStatusBarStyleDefault</string>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<key>MMSModels</key>
-	<array>
-		<dict>
-			<key>MMSModelName</key>
-			<string>Catwoman</string>
-			<key>MMSModelURL</key>
-			<string>https://cloud.box.com/shared/static/xz0is2u6lw8ltzw91sh0.obj</string>
-			<key>MMSModelNumFaces</key>
-			<integer>20092</integer>
-		</dict>
-		<dict>
-			<key>MMSModelName</key>
-			<string>Praying Mantis</string>
-			<key>MMSModelURL</key>
-			<string>https://cloud.box.com/shared/static/n28prxplszixh70ef1g1.obj</string>
-			<key>MMSModelNumFaces</key>
-			<integer>30510</integer>
-		</dict>
-		<dict>
-			<key>MMSModelName</key>
-			<string>Grayson</string>
-			<key>MMSModelURL</key>
-			<string>https://cloud.box.com/shared/static/h3q7mcnwtqt7pyiw6ucy.obj</string>
-			<key>MMSModelNumFaces</key>
-			<integer>43709</integer>
-		</dict>
-		<dict>
-			<key>MMSModelName</key>
-			<string>Caribbean Princess</string>
-			<key>MMSModelURL</key>
-			<string>https://cloud.box.com/shared/static/7hiwtc2i9nurzr4ifag0.obj</string>
-			<key>MMSModelNumFaces</key>
-			<integer>16019</integer>
-		</dict>
-		<dict>
-			<key>MMSModelName</key>
-			<string>Maybach</string>
-			<key>MMSModelURL</key>
-			<string>https://cloud.box.com/shared/static/bdkdt0p2j03zuo5ki494.obj</string>
-			<key>MMSModelNumFaces</key>
-			<integer>71508</integer>
-		</dict>
-		<dict>
-			<key>MMSModelName</key>
-			<string>Harley</string>
-			<key>MMSModelURL</key>
-			<string>https://cloud.box.com/shared/static/vliu4gj1rishoz8bpqjb.obj</string>
-			<key>MMSModelNumFaces</key>
-			<integer>13765</integer>
-		</dict>
-		<dict>
-			<key>MMSModelName</key>
-			<string>Jill</string>
-			<key>MMSModelURL</key>
-			<string>https://cloud.box.com/shared/static/ock9d81kakj91dz1x4ea.obj</string>
-			<key>MMSModelNumFaces</key>
-			<integer>16917</integer>
-		</dict>
-	</array>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<false/>
 </dict>
 </plist>
