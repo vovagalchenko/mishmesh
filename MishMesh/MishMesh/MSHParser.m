@@ -16,7 +16,7 @@
 
 @implementation MSHParser
 
-- (id)initWithFileURL:(NSURL *)fileURL
+- (id)initWithFileURL:(NSURL *)fileURL fileTypeHint:(MSHFileTypeHint)fileTypeHint
 {
     id parserInstance = nil;
     if (self = [super init])
@@ -25,9 +25,9 @@
         parserInstance = self;
         
         NSString *extension = [fileURL pathExtension];
-        if ([extension isEqualToString:@"obj"])
+        if (fileTypeHint == MSHFileTypeHintObj || [extension isEqualToString:@"obj"])
         {
-            parserInstance =  [[MSHObjParser alloc] initWithFileURL:fileURL];
+            parserInstance =  [[MSHObjParser alloc] initWithFileURL:fileURL fileTypeHint:fileTypeHint];
             self = nil;
         }
     }

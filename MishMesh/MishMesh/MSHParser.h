@@ -8,6 +8,7 @@
 
 #import <Foundation/Foundation.h>
 #import "MSHRange.h"
+#import "MSHFileTypeHint.h"
 
 #define ERROR_DOMAIN_NAME       @"MSHParseError"
 #define MAX_NUM_VERTICES        USHRT_MAX
@@ -39,7 +40,7 @@ typedef enum MSHParsingStage
 
 @interface MSHParser : NSObject
 
-- (id)initWithFileURL:(NSURL *)fileURL;
+- (id)initWithFileURL:(NSURL *)fileURL fileTypeHint:(MSHFileTypeHint)fileTypeHint;
 - (void)parseFileWithStatusChangeBlock:(void (^)(MSHParser *parser))completion;
 - (NSError *)errorWithMessage:(NSString *)msg errorCode:(MSHParseError)errCode;
 

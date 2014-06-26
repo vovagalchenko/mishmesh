@@ -15,7 +15,7 @@
 
 @implementation MSHObjParser
 
-- (id)initWithFileURL:(NSURL *)fileURL
+- (id)initWithFileURL:(NSURL *)fileURL fileTypeHint:(MSHFileTypeHint)fileTypeHint
 {
     if (self = [super init])
     {

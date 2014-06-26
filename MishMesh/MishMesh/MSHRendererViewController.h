@@ -8,6 +8,7 @@
 
 #import <UIKit/UIKit.h>
 #import <GLKit/GLKit.h>
+#import "MSHFileTypeHint.h"
 
 typedef enum MSHRendererViewControllerStatus
 {
@@ -31,7 +32,7 @@ typedef enum MSHRendererViewControllerStatus
 @interface MSHRendererViewController : GLKViewController <MSHRendererViewControllerDelegate>
 
 - (id)initWithDelegate:(id<MSHRendererViewControllerDelegate>)rendererDelegate;
-- (void)loadFile:(NSURL *)fileURL;
+- (void)loadFile:(NSURL *)fileURL fileTypeHint:(MSHFileTypeHint)fileTypeHint;
 
 @property (nonatomic, weak) id<MSHRendererViewControllerDelegate>rendererDelegate;
 @property (nonatomic, strong) UIColor *meshColor;

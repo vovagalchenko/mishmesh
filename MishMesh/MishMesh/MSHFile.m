@@ -16,17 +16,19 @@
 @property (nonatomic, readwrite, assign) MSHFileStatus status;
 @property (nonatomic, readwrite, strong) void (^onStatusUpdateBlock)(MSHFile *);
 @property (nonatomic, readwrite, strong) NSError *processingError;
+@property (nonatomic, readwrite, assign) MSHFileTypeHint fileTypeHint;
 
 @end
 
 @implementation MSHFile
 
-- (id)initWithURL:(NSURL *)url
+- (id)initWithURL:(NSURL *)url fileTypeHint:(MSHFileTypeHint)fileTypeHint
 {
     if (self = [super init])
     {
         NSAssert([[NSFileManager defaultManager] fileExistsAtPath:[url path]], @"File doesn't exist at the provided path.");
         self.localURL = url;
+        self.fileTypeHint = fileTypeHint;
     }
     return self;
 }
@@ -41,7 +43,7 @@
     }
     else
     {
-        MSHParser *parser = [[MSHParser alloc] initWithFileURL:self.localURL];
+        MSHParser *parser = [[MSHParser alloc] initWithFileURL:self.localURL fileTypeHint:self.fileTypeHint];
         [parser parseFileWithStatusChangeBlock:^(MSHParser *changedParser)
          {
              switch (changedParser.parserStage)
@@ -55,7 +57,7 @@
                      self.status = MSHFileStatusCalibrating;
                      dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^
                     {
-                        _numFaces = changedParser.faces.count;
+                        _numFaces = (unsigned int) changedParser.faces.count;
                         _numVerticesInFace = malloc(sizeof(GLubyte)*_numFaces);
                         MSHFace face;
                         int i = 0;

@@ -10,6 +10,7 @@
 #import "MSHRange.h"
 #import "MSHParser.h"
 #import "MSHFace.h"
+#import "MSHFileTypeHint.h"
 
 typedef enum MSHFileStatus
 {
@@ -26,7 +27,7 @@ typedef enum MSHFileStatus
 
 @interface MSHFile : NSObject
 
-- (id)initWithURL:(NSURL *)url;
+- (id)initWithURL:(NSURL *)url fileTypeHint:(MSHFileTypeHint)fileTypeHint;
 - (void)parseWithStatusUpdateBlock:(void (^)(MSHFile *))statusUpdateBlock;
 
 @property (nonatomic, readonly) GLfloat *vertexCoordinates;
@@ -34,7 +35,7 @@ typedef enum MSHFileStatus
 @property (nonatomic, readonly) GLushort *vertexIndices;
 @property (nonatomic, readonly) GLsizeiptr vertexIndicesSize;
 @property (nonatomic, readonly) GLubyte *numVerticesInFace; // The caller will need to free this space
-@property (nonatomic, readonly) NSUInteger numFaces;
+@property (nonatomic, readonly) unsigned int numFaces;
 @property (nonatomic, readonly) MSHVertex *outlierVertex;
 @property (nonatomic, readonly) MSHRange xRange, yRange, zRange;
 @property (nonatomic, readonly) MSHFileStatus status;

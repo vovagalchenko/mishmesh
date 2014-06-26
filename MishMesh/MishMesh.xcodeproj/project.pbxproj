@@ -18,6 +18,7 @@
 		807B99C517CC85D6004CF689 /* GLKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 807B99C417CC85D6004CF689 /* GLKit.framework */; };
 		807B99C717CC85DE004CF689 /* CoreMotion.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 807B99C617CC85DE004CF689 /* CoreMotion.framework */; };
 		807B99C917CC85E7004CF689 /* OpenGLES.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 807B99C817CC85E7004CF689 /* OpenGLES.framework */; };
+		DC996A29195CC8C100016C61 /* MSHFileTypeHint.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = DC996A28195CC7FD00016C61 /* MSHFileTypeHint.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -27,6 +28,7 @@
 			dstPath = "include/${PRODUCT_NAME}";
 			dstSubfolderSpec = 16;
 			files = (
+				DC996A29195CC8C100016C61 /* MSHFileTypeHint.h in CopyFiles */,
 				807B99C117CC8446004CF689 /* MSHRendererViewController.h in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -55,6 +57,7 @@
 		807B99C617CC85DE004CF689 /* CoreMotion.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMotion.framework; path = System/Library/Frameworks/CoreMotion.framework; sourceTree = SDKROOT; };
 		807B99C817CC85E7004CF689 /* OpenGLES.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGLES.framework; path = System/Library/Frameworks/OpenGLES.framework; sourceTree = SDKROOT; };
 		807B99D817CD9938004CF689 /* MSHParser_InternallyWritableProperties.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MSHParser_InternallyWritableProperties.h; sourceTree = "<group>"; };
+		DC996A28195CC7FD00016C61 /* MSHFileTypeHint.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MSHFileTypeHint.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -151,6 +154,7 @@
 				807B99B917CC82D7004CF689 /* Parsers */,
 				807B99B117CC82CD004CF689 /* MSHFile.h */,
 				807B99B217CC82CD004CF689 /* MSHFile.m */,
+				DC996A28195CC7FD00016C61 /* MSHFileTypeHint.h */,
 			);
 			name = "File Handling";
 			sourceTree = "<group>";
@@ -277,6 +281,7 @@
 				DSTROOT = /tmp/MishMesh.dst;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "MishMesh/MishMesh-Prefix.pch";
+				ONLY_ACTIVE_ARCH = NO;
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;

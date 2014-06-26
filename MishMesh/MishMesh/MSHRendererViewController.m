@@ -28,8 +28,8 @@
 #define DIMENSION_OF_DEVICE_MOTION_ICON                         40.0f
 #define BOUNCE_FACTOR                                           1.2f
 #define DEVICE_MOTION_ICON_PADDING                              5.0f
-#define DEVICE_MOTION_ICON_RESTING_X                            self.view.bounds.size.width - DIMENSION_OF_DEVICE_MOTION_ICON - DEVICE_MOTION_ICON_PADDING
-#define DEVICE_MOTION_ICON_RESTING_Y                            DEVICE_MOTION_ICON_PADDING
+#define DEVICE_MOTION_ICON_RESTING_X                            (self.view.bounds.size.width - DIMENSION_OF_DEVICE_MOTION_ICON - DEVICE_MOTION_ICON_PADDING)
+#define DEVICE_MOTION_ICON_RESTING_Y                            (DEVICE_MOTION_ICON_PADDING + self.topLayoutGuide.length)
 #define DEVICE_MOTION_ANIMATION_LENGTH                          0.2f
 #define FINGER_FAT                                              22.0f
 
@@ -221,12 +221,12 @@ typedef struct MSHQuaternionSnapshot
     _currentScale = 1;
 }
 
-- (void)loadFile:(NSURL *)fileURL
+- (void)loadFile:(NSURL *)fileURL fileTypeHint:(MSHFileTypeHint)fileTypeHint
 {
     ASSERT_MAIN_THREAD();
     [self cleanupDisplayedMesh];
     NSAssert([fileURL isFileURL], @"loadFile: only operates on local file URLs.");
-    MSHFile *file = [[MSHFile alloc] initWithURL:fileURL];
+    MSHFile *file = [[MSHFile alloc] initWithURL:fileURL fileTypeHint:fileTypeHint];
     __weak MSHRendererViewController *weakSelf = self;
     [file parseWithStatusUpdateBlock:^(MSHFile *parsedFile)
      {
@@ -406,8 +406,8 @@ static inline CGFloat getDistance(CGPoint point1, CGPoint point2)
         [UIView animateWithDuration:ANIMATION_LENGTH animations:^
         {
             self.deviceMotionIconView.bounds = CGRectMake(0, 0, DIMENSION_OF_DEVICE_MOTION_ICON, DIMENSION_OF_DEVICE_MOTION_ICON);
-             self.deviceMotionIconView.frame = CGRectMake(DEVICE_MOTION_ICON_RESTING_X, DEVICE_MOTION_ICON_RESTING_Y,
-                                                          DIMENSION_OF_DEVICE_MOTION_ICON, DIMENSION_OF_DEVICE_MOTION_ICON);
+            self.deviceMotionIconView.frame = CGRectMake(DEVICE_MOTION_ICON_RESTING_X, DEVICE_MOTION_ICON_RESTING_Y,
+                                                         DIMENSION_OF_DEVICE_MOTION_ICON, DIMENSION_OF_DEVICE_MOTION_ICON);
         }];
         self.deviceMotionIconView.frame = CGRectMake(DEVICE_MOTION_ICON_RESTING_X, DEVICE_MOTION_ICON_RESTING_Y,
                                                      DIMENSION_OF_DEVICE_MOTION_ICON, DIMENSION_OF_DEVICE_MOTION_ICON);
@@ -456,7 +456,11 @@ static inline CGFloat getDistance(CGPoint point1, CGPoint point2)
                                                                                    -_currentQuaternionSnapshot.quaternion.z,
                                                                                    _currentQuaternionSnapshot.quaternion.w), _currentRotationQuaternion);
             NSDate *now = [NSDate date];
-            _angleRateOfChangeDueToDrag = GLKQuaternionAngle(diffQuaternion)/([now timeIntervalSince1970] - _currentQuaternionSnapshot.time);
+            // Accuracy suffers at super high sampling rates
+            if ([now timeIntervalSince1970] - _currentQuaternionSnapshot.time > 0.01)
+            {
+                _angleRateOfChangeDueToDrag = GLKQuaternionAngle(diffQuaternion)/([now timeIntervalSince1970] - _currentQuaternionSnapshot.time);
+            }
             _inertialQuaternionAxis = GLKQuaternionAxis(_currentRotationQuaternion);
             
             // The axis of rotation is undefined when the quaternion angle becomes M_PI.
@@ -466,7 +470,7 @@ static inline CGFloat getDistance(CGPoint point1, CGPoint point2)
                 [self flushCurrenQuaternionWithNewAnchorPoint:currentTouchPoint];
             }
             
-            _currentQuaternionSnapshot = MSHQuaternionSnapshotMake(_currentRotationQuaternion);
+            _currentQuaternionSnapshot = MSHQuaternionSnapshotMake(_currentRotationQuaternion, now);
         }
         else if ([panRecognizer state] == UIGestureRecognizerStateEnded ||
                  [panRecognizer state] == UIGestureRecognizerStateCancelled)
@@ -746,11 +750,11 @@ static inline GLKQuaternion getQuaternion(GLKVector3 unitVector1, GLKVector3 uni
     return result;
 }
 
-static inline MSHQuaternionSnapshot MSHQuaternionSnapshotMake(GLKQuaternion q)
+static inline MSHQuaternionSnapshot MSHQuaternionSnapshotMake(GLKQuaternion q, NSDate *date)
 {
     MSHQuaternionSnapshot snapshot;
     snapshot.quaternion = q;
-    snapshot.time = [[NSDate date] timeIntervalSince1970];
+    snapshot.time = [date timeIntervalSince1970];
     return snapshot;
 }
 
