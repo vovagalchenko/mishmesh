@@ -70,8 +70,6 @@ typedef struct MSHQuaternionSnapshot
     GLubyte *_numVerticesInFace;
     GLuint _numFaces;
     
-    GLKVector3 _outlierPosition;
-    
     MSHAnimationAttributes _scaleAnimationAttributes;
     MSHAnimationAttributes _panXAnimationAttributes;
     MSHAnimationAttributes _panYAnimationAttributes;
@@ -282,8 +280,6 @@ typedef struct MSHQuaternionSnapshot
     _modelMatrix = GLKMatrix4MakeTranslation(-getMidpoint(file.xRange), -getMidpoint(file.yRange), -getMidpoint(file.zRange));
     _numVerticesInFace = file.numVerticesInFace;
     _numFaces = file.numFaces;
-    
-    _outlierPosition = file.outlierVertex.position;
     
     glGenVertexArraysOES(1, &_vao);
     glBindVertexArrayOES(_vao);
