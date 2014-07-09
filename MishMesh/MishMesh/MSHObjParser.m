@@ -135,7 +135,7 @@
                                     self.parserStage = MSHParsingStageError;
                                     return;
                                 }
-                                MSHFace face = MSHFaceMake(definitionComponents.count - 1);
+                                MSHFace face = MSHFaceMake((unsigned int) definitionComponents.count - 1);
                                 NSMutableArray *vertexesForNormalCalculation = nil;
                                 unsigned int currentFaceIndex = 0;
                                 for (int i = 1; i < definitionComponents.count; i++)
@@ -152,7 +152,7 @@
                                     NSInteger vertexIndex = [[vertexDefinitionComponents objectAtIndex:0] integerValue];
                                     vertexIndex = getIndex(tmpVertices, vertexIndex);
                                     MSHVertex *vertex = [tmpVertices objectAtIndex:vertexIndex];
-                                    unsigned int suggestedIndex = vertices.count;
+                                    unsigned int suggestedIndex = (unsigned int) vertices.count;
                                     id normalId = [NSNull null];
                                     // obj specification allows vertex normals to be specified explicitly or implicitly.
                                     if (vertexDefinitionComponents.count == 3)
