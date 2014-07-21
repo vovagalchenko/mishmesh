@@ -29,7 +29,7 @@
 {
     NSAssert(self.fileURL && statusChangeUpdate, @"Did not submit enough to the parser.");
     self.onStatusUpdateBlock = statusChangeUpdate;
-    // Don't want to use a weak version of self in the block below. Need self to stick around until the block's executed.
+    // Don't want to use a weak version of self in the block below. Need self to stick around until the block is done.
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^
     {
         MSHRange outXRange = makeExtremeRange();

@@ -102,6 +102,10 @@ typedef struct MSHQuaternionSnapshot
 @property (strong, nonatomic) MSHDeviceMotionIconView *deviceMotionIconView;
 @property (strong, nonatomic) UIPanGestureRecognizer *panGestureRecognizer;
 @property (strong, nonatomic) UIPanGestureRecognizer *rotationGestureRecognizer;
+// For a more straightforward memory management scheme, let's keep a strong
+// reference to the file being parsed while being parsed. Once the file is
+// loaded into the GPU, we will drop it.
+@property (nonatomic, readwrite, strong) MSHFile *fileBeingParsed;
 
 @end
 
@@ -194,15 +198,10 @@ typedef struct MSHQuaternionSnapshot
     self.effect = nil;
 }
 
-
-- (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation
+- (void)viewWillLayoutSubviews
 {
-    if (UIInterfaceOrientationIsLandscape(fromInterfaceOrientation) ^
-        UIInterfaceOrientationIsLandscape(self.interfaceOrientation))
-    {
-        [self calculateCameraParams];
-        [self animateToInitialPerspective];
-    }
+    [self calculateCameraParams];
+    [self animateToInitialPerspective];
 }
 
 #pragma mark - File Loading
@@ -224,33 +223,37 @@ typedef struct MSHQuaternionSnapshot
     ASSERT_MAIN_THREAD();
     [self cleanupDisplayedMesh];
     NSAssert([fileURL isFileURL], @"loadFile: only operates on local file URLs.");
-    MSHFile *file = [[MSHFile alloc] initWithURL:fileURL fileTypeHint:fileTypeHint];
-    __weak MSHRendererViewController *weakSelf = self;
-    [file parseWithStatusUpdateBlock:^(MSHFile *parsedFile)
+    NSAssert(!self.fileBeingParsed, @"There's no reason to call this when there's already a file being parsed.");
+    self.fileBeingParsed = [[MSHFile alloc] initWithURL:fileURL fileTypeHint:fileTypeHint];
+    [self.fileBeingParsed parseWithStatusUpdateBlock:^(MSHFile *parsedFile)
      {
          ASSERT_MAIN_THREAD();
          switch (parsedFile.status)
          {
              case MSHFileStatusFailure:
-                 [weakSelf.rendererDelegate rendererEncounteredError:parsedFile.processingError];
+                 [self.rendererDelegate rendererEncounteredError:parsedFile.processingError];
                  break;
              case MSHFileStatusReady:
-                 [weakSelf loadFileIntoGraphicsHardware:file];
+                 [self loadFileIntoGraphicsHardware:parsedFile];
+                 
+                 // This is the last callback we're going to receive about this file.
+                 // We don't need a strong reference to it anymore.
+                 self.fileBeingParsed = nil;
                  break;
              case MSHFileStatusCalibrating:
-                 [weakSelf.rendererDelegate rendererChangedStatus:MSHRendererViewControllerStatusMeshCalibrating];
+                 [self.rendererDelegate rendererChangedStatus:MSHRendererViewControllerStatusMeshCalibrating];
                  break;
              case MSHFileStatusParsingVertices:
-                 [weakSelf.rendererDelegate rendererChangedStatus:MSHRendererViewControllerStatusFileLoadParsingVertices];
+                 [self.rendererDelegate rendererChangedStatus:MSHRendererViewControllerStatusFileLoadParsingVertices];
                  break;
              case MSHFileStatusParsingFaces:
-                 [weakSelf.rendererDelegate rendererChangedStatus:MSHRendererViewControllerStatusFileLoadParsingVertexNormals];
+                 [self.rendererDelegate rendererChangedStatus:MSHRendererViewControllerStatusFileLoadParsingVertexNormals];
                  break;
              case MSHFileStatusParsingVertexNormals:
-                 [weakSelf.rendererDelegate rendererChangedStatus:MSHRendererViewControllerStatusFileLoadParsingFaces];
+                 [self.rendererDelegate rendererChangedStatus:MSHRendererViewControllerStatusFileLoadParsingFaces];
                  break;
              default:
-                 [weakSelf.rendererDelegate rendererChangedStatus:MSHRendererViewControllerStatusUnknown];
+                 [self.rendererDelegate rendererChangedStatus:MSHRendererViewControllerStatusUnknown];
                  break;
          }
      }];
@@ -258,7 +261,15 @@ typedef struct MSHQuaternionSnapshot
 
 - (void)calculateCameraParams
 {
-    _aspect = fabsf(self.view.bounds.size.width / self.view.bounds.size.height);
+    if (self.view.bounds.size.width == 0 || self.view.bounds.size.height == 0)
+    {
+        NSAssert(NO, @"We're trying to calculate camera parameters, with an invalid view size.");
+        _aspect = 1;
+    }
+    else
+    {
+        _aspect = fabsf(self.view.bounds.size.width / self.view.bounds.size.height);
+    }
     GLfloat camHorizAngle = 2*atan(_aspect*tan(CAM_VERT_ANGLE/2));
     GLfloat distanceToFitHorizontally = (_maxDistanceToFit * PORTION_OF_DIMENSION_TO_FIT)/(2*tan(camHorizAngle/2));
     GLfloat distanceToFitVertically = (_maxDistanceToFit * PORTION_OF_DIMENSION_TO_FIT)/(2*tan(CAM_VERT_ANGLE/2));

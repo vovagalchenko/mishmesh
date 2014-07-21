@@ -57,8 +57,7 @@
     {
         dispatch_async(dispatch_get_main_queue(), ^
         {
-            __weak MSHParser *me = self;
-            self.onStatusUpdateBlock(me);
+            self.onStatusUpdateBlock(self);
         });
     }
 }

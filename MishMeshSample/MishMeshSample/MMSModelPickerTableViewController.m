@@ -75,7 +75,7 @@ static NSString *CellIdentifier = @"Cell";
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
 {
     MMSRemoteModelDisplayViewController *modelDisplayVC = (MMSRemoteModelDisplayViewController *)self.presentingViewController;
-    [modelDisplayVC loadFile:[NSURL URLWithString:[[self.tableData objectAtIndex:indexPath.row] objectForKey:URL_KEY]]];
+    [modelDisplayVC loadFile:[NSURL URLWithString:[[self.tableData objectAtIndex:indexPath.row] objectForKey:URL_KEY]] fileTypeHint:MSHFileTypeHintNone];
     [modelDisplayVC dismissViewControllerAnimated:YES completion:nil];
 }
 

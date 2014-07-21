@@ -143,7 +143,7 @@ static BOOL needsModal = YES;
     }
 }
 
-- (void)loadFile:(NSURL *)urlToLoad
+- (void)loadFile:(NSURL *)urlToLoad fileTypeHint:(MSHFileTypeHint)fileTypeHint
 {
     [self setLoadingHeaderText:@"Downloading..." infoText:@""];
     [NSURLConnection sendAsynchronousRequest:[[NSURLRequest alloc] initWithURL:urlToLoad]
@@ -159,7 +159,7 @@ static BOOL needsModal = YES;
          NSAssert([data writeToFile:currentFile atomically:YES], @"Couldn't write to the current_model file.");
          dispatch_async(dispatch_get_main_queue(), ^
          {
-             [super loadFile:[NSURL fileURLWithPath:currentFile]];
+             [super loadFile:[NSURL fileURLWithPath:currentFile] fileTypeHint:MSHFileTypeHintNone];
          });
      }];
 }

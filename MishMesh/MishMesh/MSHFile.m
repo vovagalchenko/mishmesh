@@ -36,6 +36,12 @@
 - (void)parseWithStatusUpdateBlock:(void (^)(MSHFile *))statusUpdateBlock
 {
     NSAssert(self.localURL, @"Must have the file locally in order to parse it.");
+    if (self.onStatusUpdateBlock)
+    {
+        NSAssert(NO, @"You are already parsing this file. This call will be ignored.");
+        return;
+    }
+    
     self.onStatusUpdateBlock = statusUpdateBlock;
     if (self.vertexCoordinates)
     {
@@ -43,6 +49,8 @@
     }
     else
     {
+        // Don't need to keep a strong reference to the parser. It takes care to keep itself around while
+        // parsing is in progress. When the parsing block is done, the parser will be deallocated.
         MSHParser *parser = [[MSHParser alloc] initWithFileURL:self.localURL fileTypeHint:self.fileTypeHint];
         [parser parseFileWithStatusChangeBlock:^(MSHParser *changedParser)
          {
@@ -59,6 +67,7 @@
                     {
                         _numFaces = (unsigned int) changedParser.faces.count;
                         _numVerticesInFace = malloc(sizeof(GLubyte)*_numFaces);
+                        memset(_numVerticesInFace, 0, sizeof(GLubyte)*_numFaces);
                         MSHFace face;
                         int i = 0;
                         int numIndices = 0;
@@ -143,8 +152,7 @@
     {
         dispatch_async(dispatch_get_main_queue(), ^
         {
-            __weak MSHFile *me = self;
-            self.onStatusUpdateBlock(me);
+            self.onStatusUpdateBlock(self);
         });
     }
 }
