@@ -9,22 +9,9 @@
 #import <Foundation/Foundation.h>
 #import "MSHRange.h"
 #import "MSHFileTypeHint.h"
+#import "MSHParseError.h"
 
-#define ERROR_DOMAIN_NAME       @"MSHParseError"
 #define MAX_NUM_VERTICES        USHRT_MAX
-
-typedef enum MSHParseError
-{
-    MSHParseErrorFileTypeUnsupported,
-    MSHParseErrorUnableToOpenFile,
-    MSHParseErrorFileIOFailure,
-    MSHParseErrorInvalidVertexDefinition,
-    MSHParseErrorInvalidNormalDefinition,
-    MSHParseErrorInvalidFaceDefinition,
-    MSHParseErrorVertexNumberLimitExceeded,
-    MSHParseErrorNoGeometry,
-    MSHParseErrorUnknown
-} MSHParseError;
 
 typedef enum MSHParsingStage
 {

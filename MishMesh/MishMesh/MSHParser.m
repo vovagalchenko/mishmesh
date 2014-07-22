@@ -43,7 +43,7 @@
 
 - (NSError *)errorWithMessage:(NSString *)msg errorCode:(MSHParseError)errCode
 {
-    NSError *error = [[NSError alloc] initWithDomain:ERROR_DOMAIN_NAME
+    NSError *error = [[NSError alloc] initWithDomain:MSH_ERROR_DOMAIN_NAME
                                                 code:errCode
                                             userInfo:@{NSLocalizedDescriptionKey: msg, NSFilePathErrorKey : self.fileURL.path}];
     return error;

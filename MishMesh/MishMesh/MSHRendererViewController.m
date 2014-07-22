@@ -29,7 +29,7 @@
 #define BOUNCE_FACTOR                                           1.2f
 #define DEVICE_MOTION_ICON_PADDING                              5.0f
 #define DEVICE_MOTION_ICON_RESTING_X                            (self.view.bounds.size.width - DIMENSION_OF_DEVICE_MOTION_ICON - DEVICE_MOTION_ICON_PADDING)
-#define DEVICE_MOTION_ICON_RESTING_Y                            (DEVICE_MOTION_ICON_PADDING + self.topLayoutGuide.length)
+#define DEVICE_MOTION_ICON_RESTING_Y                            (DEVICE_MOTION_ICON_PADDING + self.topLayoutGuideLength)
 #define DEVICE_MOTION_ANIMATION_LENGTH                          0.2f
 #define FINGER_FAT                                              22.0f
 
@@ -93,6 +93,10 @@ typedef struct MSHQuaternionSnapshot
     CGPoint _lastSignificantScreenPinchAnchor;
     GLKVector3 _pinchWorldAnchorPoint;
     GLfloat _scale, _currentScale;
+    
+    float _currentFrameRate;
+    
+    CGRect _previousBounds;
 }
 
 @property (strong, nonatomic) EAGLContext *context;
@@ -125,6 +129,7 @@ typedef struct MSHQuaternionSnapshot
         self.rendererDelegate = rendererDelegate;
         self.meshColor = DEFAULT_MESH_COLOR;
         self.inertiaDampeningRate = 2;
+        _previousBounds = CGRectZero;
     }
     return self;
 }
@@ -174,6 +179,17 @@ typedef struct MSHQuaternionSnapshot
     return self.referenceAttitude == nil;
 }
 
+- (CGFloat)topLayoutGuideLength
+{
+    CGFloat topLayoutGuideLength = 0;
+    // topLayoutGuide is only there for iOS 7.0 and later
+    if ([self respondsToSelector:@selector(topLayoutGuide)])
+    {
+        topLayoutGuideLength = [(id<UILayoutSupport>)[self performSelector:@selector(topLayoutGuide)] length];
+    }
+    return topLayoutGuideLength;
+}
+
 - (void)dealloc
 {
     [self tearDownOpenGL];
@@ -200,8 +216,12 @@ typedef struct MSHQuaternionSnapshot
 
 - (void)viewWillLayoutSubviews
 {
-    [self calculateCameraParams];
-    [self animateToInitialPerspective];
+    if (!CGRectEqualToRect(self.view.bounds, _previousBounds))
+    {
+        [self calculateCameraParams];
+        [self animateToInitialPerspective];
+        _previousBounds = self.view.bounds;
+    }
 }
 
 #pragma mark - File Loading
@@ -232,6 +252,10 @@ typedef struct MSHQuaternionSnapshot
          {
              case MSHFileStatusFailure:
                  [self.rendererDelegate rendererEncounteredError:parsedFile.processingError];
+                 
+                 // This is the last callback we're going to receive about this file.
+                 // We don't need a strong reference to it anymore.
+                 self.fileBeingParsed = nil;
                  break;
              case MSHFileStatusReady:
                  [self loadFileIntoGraphicsHardware:parsedFile];
@@ -313,6 +337,12 @@ typedef struct MSHQuaternionSnapshot
     glBindVertexArrayOES(0);
     
     [self rendererChangedStatus:MSHRendererViewControllerStatusMeshDisplaying];
+    _currentFrameRate = 0;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        if (self.preferredFramesPerSecond - _currentFrameRate > 5) {
+            ((GLKView *) self.view).drawableMultisample = GLKViewDrawableMultisampleNone;
+        }
+    });
 }
 
 #pragma mark - Handling User Input
@@ -627,6 +657,8 @@ static inline BOOL applyAnimationAttributes(float *attribute, MSHAnimationAttrib
 {
     GLKQuaternion preinertialQuaternion = [self preinertialQuaternion];
     float timeSinceLastUpdate = self.timeSinceLastUpdate;
+    if (timeSinceLastUpdate > 0)
+        _currentFrameRate = 1.0 / timeSinceLastUpdate;
     float oldQuaternionAngle = GLKQuaternionAngle(preinertialQuaternion);
     float newQuaternionAngle = oldQuaternionAngle;
     applyAnimationAttributes(&newQuaternionAngle, &_quaternionAnimationAttributes, timeSinceLastUpdate);

@@ -18,6 +18,7 @@
 		807B99C517CC85D6004CF689 /* GLKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 807B99C417CC85D6004CF689 /* GLKit.framework */; };
 		807B99C717CC85DE004CF689 /* CoreMotion.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 807B99C617CC85DE004CF689 /* CoreMotion.framework */; };
 		807B99C917CC85E7004CF689 /* OpenGLES.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 807B99C817CC85E7004CF689 /* OpenGLES.framework */; };
+		DC86F02D197E5824000547BB /* MSHParseError.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = DC86F02C197E57C1000547BB /* MSHParseError.h */; };
 		DC996A29195CC8C100016C61 /* MSHFileTypeHint.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = DC996A28195CC7FD00016C61 /* MSHFileTypeHint.h */; };
 /* End PBXBuildFile section */
 
@@ -28,6 +29,7 @@
 			dstPath = "include/${PRODUCT_NAME}";
 			dstSubfolderSpec = 16;
 			files = (
+				DC86F02D197E5824000547BB /* MSHParseError.h in CopyFiles */,
 				DC996A29195CC8C100016C61 /* MSHFileTypeHint.h in CopyFiles */,
 				807B99C117CC8446004CF689 /* MSHRendererViewController.h in CopyFiles */,
 			);
@@ -57,6 +59,7 @@
 		807B99C617CC85DE004CF689 /* CoreMotion.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMotion.framework; path = System/Library/Frameworks/CoreMotion.framework; sourceTree = SDKROOT; };
 		807B99C817CC85E7004CF689 /* OpenGLES.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGLES.framework; path = System/Library/Frameworks/OpenGLES.framework; sourceTree = SDKROOT; };
 		807B99D817CD9938004CF689 /* MSHParser_InternallyWritableProperties.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MSHParser_InternallyWritableProperties.h; sourceTree = "<group>"; };
+		DC86F02C197E57C1000547BB /* MSHParseError.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MSHParseError.h; sourceTree = "<group>"; };
 		DC996A28195CC7FD00016C61 /* MSHFileTypeHint.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MSHFileTypeHint.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -144,6 +147,7 @@
 				807B99BC17CC82E5004CF689 /* MSHParser.h */,
 				807B99BD17CC82E5004CF689 /* MSHParser.m */,
 				807B99D817CD9938004CF689 /* MSHParser_InternallyWritableProperties.h */,
+				DC86F02C197E57C1000547BB /* MSHParseError.h */,
 			);
 			name = Parsers;
 			sourceTree = "<group>";
