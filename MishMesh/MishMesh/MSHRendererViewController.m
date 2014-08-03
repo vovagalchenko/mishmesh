@@ -13,6 +13,7 @@
 #import <CoreMotion/CoreMotion.h>
 #import "MSHDeviceMotionIconView.h"
 #import <fenv.h>
+#import <OpenGLES/ES1/glext.h>
 
 #define BUFFER_OFFSET(i)                                        ((char *)NULL + (i))
 #define CAM_VERT_ANGLE                                          GLKMathDegreesToRadians(65)
