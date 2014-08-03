@@ -1,6 +1,6 @@
 MishMesh
 ========
-iOS library for viewing 3D files. Delivered in the form of a static library and a single header file MSHRendererViewController.h which exposes everything you need to render 3D meshes. This repository includes a sample app project which demonstrates how this work can be integrated into another project. A quick demo of this library's features can be seen here: <http://youtu.be/ahDldv0AnMc>
+iOS library for viewing 3D files. Delivered in the form of a static library which exposes everything you need to render 3D meshes. This repository includes a sample app project which demonstrates how this work can be easily integrated into another project. A quick demo of this library's features can be seen here: <http://youtu.be/ahDldv0AnMc>
 
 Limitations
 ===========
