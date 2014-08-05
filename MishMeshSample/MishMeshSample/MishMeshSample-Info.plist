@@ -82,6 +82,14 @@
 			<key>MMSModelURL</key>
 			<string>https://cloud.box.com/shared/static/ock9d81kakj91dz1x4ea.obj</string>
 		</dict>
+		<dict>
+			<key>MMSModelName</key>
+			<string>Extended Lines Test</string>
+			<key>MMSModelNumFaces</key>
+			<integer>12842</integer>
+			<key>MMSModelURL</key>
+			<string>https://cloud.box.com/shared/static/bv95z64b96j33i432lsx.obj</string>
+		</dict>
 	</array>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>

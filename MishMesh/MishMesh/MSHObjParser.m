@@ -52,13 +52,24 @@
 
         NSString *partialLine = @"";
         NSData *fileData = nil;
+        NSRegularExpression *lineExtenderRegex = [NSRegularExpression regularExpressionWithPattern:@"\\\\(\\r)?\\n" options:0 error:&error];
+        if (error)
+        {
+            self.parseError = error;
+            self.parserStage = MSHParsingStageError;
+            return;
+        }
         @try {
             do
             {
                 @autoreleasepool
                 {
                     fileData = [fileHandle readDataOfLength:chunkSize];
-                    NSString *ingestedString = [[NSString alloc] initWithBytes:fileData.bytes length:fileData.length encoding:NSUTF8StringEncoding];
+                    NSMutableString *ingestedString = [[NSMutableString alloc] initWithBytes:fileData.bytes length:fileData.length encoding:NSUTF8StringEncoding];
+                    [lineExtenderRegex replaceMatchesInString:ingestedString
+                                                      options:NSMatchingWithoutAnchoringBounds
+                                                        range:NSMakeRange(0, ingestedString.length)
+                                                 withTemplate:@""];
                     NSMutableArray *ingestedLines = [NSMutableArray arrayWithArray:[ingestedString componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]]];
                     ingestedString = nil;
                     [ingestedLines replaceObjectAtIndex:0 withObject:[partialLine stringByAppendingString:[ingestedLines objectAtIndex:0]]];
