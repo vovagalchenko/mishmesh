@@ -32,7 +32,7 @@ typedef enum MSHFileStatus
 
 @property (nonatomic, readonly) GLfloat *vertexCoordinates;
 @property (nonatomic, readonly) GLsizeiptr vertexCoordinatesSize;
-@property (nonatomic, readonly) GLushort *vertexIndices;
+@property (nonatomic, readonly) GLuint *vertexIndices;
 @property (nonatomic, readonly) GLsizeiptr vertexIndicesSize;
 @property (nonatomic, readonly) GLubyte *numVerticesInFace; // The caller will need to free this space
 @property (nonatomic, readonly) unsigned int numFaces;

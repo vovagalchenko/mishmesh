@@ -11,7 +11,7 @@
 #import "MSHFileTypeHint.h"
 #import "MSHParseError.h"
 
-#define MAX_NUM_VERTICES        USHRT_MAX
+#define MAX_NUM_VERTICES        UINT_MAX
 
 typedef enum MSHParsingStage
 {

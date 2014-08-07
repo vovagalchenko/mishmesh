@@ -63,7 +63,7 @@ typedef struct MSHQuaternionSnapshot
 
 @interface MSHRendererViewController()
 {
-    GLuint _vao;
+    GLuint _vao, _arrayVbo, _elementsVbo;
     GLfloat _eyeZ; // For the view matrix
     GLfloat _aspect, _nearZ, _farZ;
 	GLfloat _maxDistanceToFit;
@@ -151,6 +151,7 @@ typedef struct MSHQuaternionSnapshot
     [EAGLContext setCurrentContext:self.context];
     
     self.effect = [[GLKBaseEffect alloc] init];
+    self.effect.lightModelTwoSided = GL_TRUE;
     self.effect.light0.enabled = GL_TRUE;
     
     CGFloat colorComponents[4];
@@ -229,6 +230,9 @@ typedef struct MSHQuaternionSnapshot
 
 - (void)cleanupDisplayedMesh
 {
+    glDeleteVertexArraysOES(1, &_vao);
+    glDeleteBuffers(1, &_arrayVbo);
+    glDeleteBuffers(1, &_elementsVbo);
     _vao = 0;
     free(_numVerticesInFace);
     _numVerticesInFace = NULL;
@@ -317,17 +321,19 @@ typedef struct MSHQuaternionSnapshot
     _numVerticesInFace = file.numVerticesInFace;
     _numFaces = file.numFaces;
     
+    glDeleteVertexArraysOES(1, &_vao);
+    glDeleteBuffers(1, &_arrayVbo);
+    glDeleteBuffers(1, &_elementsVbo);
+    
     glGenVertexArraysOES(1, &_vao);
     glBindVertexArrayOES(_vao);
     
-    GLuint arrayVbo;
-    glGenBuffers(1, &arrayVbo);
-    glBindBuffer(GL_ARRAY_BUFFER, arrayVbo);
+    glGenBuffers(1, &_arrayVbo);
+    glBindBuffer(GL_ARRAY_BUFFER, _arrayVbo);
     glBufferData(GL_ARRAY_BUFFER, file.vertexCoordinatesSize, file.vertexCoordinates, GL_STATIC_DRAW);
     
-    GLuint elementsVbo;
-    glGenBuffers(1, &elementsVbo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementsVbo);
+    glGenBuffers(1, &_elementsVbo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _elementsVbo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, file.vertexIndicesSize, file.vertexIndices, GL_STATIC_DRAW);
     
     glEnableVertexAttribArray(GLKVertexAttribPosition);
@@ -737,10 +743,10 @@ static inline BOOL applyAnimationAttributes(float *attribute, MSHAnimationAttrib
         
         [self.effect prepareToDraw];
         
-        GLushort *faceOffset = 0;
+        GLuint *faceOffset = 0;
         for (int i = 0; i < _numFaces; i++)
         {
-            glDrawElements(GL_TRIANGLE_FAN, _numVerticesInFace[i], GL_UNSIGNED_SHORT, (const void *)faceOffset);
+            glDrawElements(GL_TRIANGLE_FAN, _numVerticesInFace[i], GL_UNSIGNED_INT, (const void *)faceOffset);
             faceOffset += _numVerticesInFace[i];
         }
     }

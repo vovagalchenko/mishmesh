@@ -79,7 +79,7 @@
                         }
                         if (numIndices)
                         {
-                            _vertexIndicesSize = sizeof(GLushort)*numIndices;
+                            _vertexIndicesSize = sizeof(GLuint)*numIndices;
                             _vertexIndices = malloc(_vertexIndicesSize);
                         }
                         i = 0;
@@ -118,6 +118,7 @@
                                     outlier = vertex;
                                 }
                             }
+                            MSHFaceFree(face);
                         }
                         _xRange = changedParser.xRange;
                         _yRange = changedParser.yRange;

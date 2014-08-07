@@ -131,7 +131,8 @@
                                             self.parserStage = MSHParsingStageError;
                                             return;
                                         }
-                                        [tmpNormals addObject:[NSArray arrayWithObjects:[definitionComponents objectAtIndex:1],
+                                        [tmpNormals addObject:[NSArray arrayWithObjects:
+                                                               [definitionComponents objectAtIndex:1],
                                                                [definitionComponents objectAtIndex:2],
                                                                [definitionComponents objectAtIndex:3], nil]];
                                     }

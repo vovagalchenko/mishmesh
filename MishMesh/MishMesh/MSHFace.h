@@ -11,7 +11,7 @@
 
 typedef struct MSHFace
 {
-    GLushort *vertexIndices;
+    GLuint *vertexIndices;
     GLubyte numVertices;
 } MSHFace;
 
@@ -19,8 +19,13 @@ static inline MSHFace MSHFaceMake(unsigned int numVertices)
 {
     MSHFace face;
     face.numVertices = numVertices;
-    face.vertexIndices = malloc(sizeof(unsigned short) * numVertices);
+    face.vertexIndices = malloc(sizeof(GLuint) * numVertices);
     return face;
+}
+
+static inline void MSHFaceFree(MSHFace faceToFree)
+{
+    free(faceToFree.vertexIndices);
 }
 
 #endif
