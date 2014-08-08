@@ -98,6 +98,8 @@ typedef struct MSHQuaternionSnapshot
     float _currentFrameRate;
     
     CGRect _previousBounds;
+
+    GLKVector4 _lightPositionBeforeAccelerometerControl;
 }
 
 @property (strong, nonatomic) EAGLContext *context;
@@ -153,6 +155,7 @@ typedef struct MSHQuaternionSnapshot
     self.effect = [[GLKBaseEffect alloc] init];
     self.effect.lightModelTwoSided = GL_TRUE;
     self.effect.light0.enabled = GL_TRUE;
+    self.effect.light0.position = objectCoordinatesLightPosition(self.effect.transform.modelviewMatrix);
     
     CGFloat colorComponents[4];
     getRGBA(self.meshColor, colorComponents);
@@ -446,6 +449,7 @@ static inline CGFloat getDistance(CGPoint point1, CGPoint point2)
     }
     else if ([longPressRecognizer state] == UIGestureRecognizerStateEnded && UIInterfaceOrientationIsPortrait(self.interfaceOrientation))
     {
+        _lightPositionBeforeAccelerometerControl = objectCoordinatesLightPosition(self.effect.transform.modelviewMatrix);
         self.referenceAttitude = self.motionManager.deviceMotion.attitude;
         [UIView animateWithDuration:ANIMATION_LENGTH animations:^
         {
@@ -723,6 +727,18 @@ static inline BOOL applyAnimationAttributes(float *attribute, MSHAnimationAttrib
     _viewMatrix = viewMatrix;
     self.effect.transform.modelviewMatrix = GLKMatrix4Multiply(_viewMatrix, transformedModelMatrix);
     self.effect.transform.projectionMatrix = GLKMatrix4MakePerspective(CAM_VERT_ANGLE, _aspect, _nearZ, _farZ);
+    if (self.referenceAttitude ||
+        _animatingEulerAngles.pitch ||
+        _animatingEulerAngles.yaw ||
+        _animatingEulerAngles.roll)
+    {
+        // In general, the light stays stationary as the model is affected by the modelviewMatrix.
+        // However, when we are controlling the camera with the accelerometer, we'd like to
+        // create the illusion of the camera moving while the light stays put relative to the model.
+        // We'll keep resetting the light's position. Everytime we reset it, the modelviewMatrix
+        // gets applied to it and so it stays in the same place relative to the model.
+        self.effect.light0.position = _lightPositionBeforeAccelerometerControl;
+    }
     
     applyAnimationAttributes(&_scale, &_scaleAnimationAttributes, timeSinceLastUpdate);
     applyAnimationAttributes(&_totalPan.x, &_panXAnimationAttributes, timeSinceLastUpdate);
@@ -809,6 +825,16 @@ static inline void printQuaternion(GLKQuaternion quaternion)
     GLKVector3 axis = GLKQuaternionAxis(quaternion);
     float angle = GLKQuaternionAngle(quaternion);
     VLog(@"(%f, %f, %f) %f", axis.x, axis.y, axis.z, angle);
+}
+
+#pragma mark - Light Helpers
+
+static inline GLKVector4 objectCoordinatesLightPosition(GLKMatrix4 modelViewMatrix)
+{
+    bool invertible = NO;
+    GLKVector4 result = GLKMatrix4MultiplyVector4(GLKMatrix4Invert(modelViewMatrix, &invertible), GLKVector4Make(0.0, 0.0, 1.0, 0.0));
+    NSCAssert(invertible, @"Somehow the modelview matrix became non-invertible.");
+    return GLKVector4Make(result.x, result.y, result.z, 0.0);
 }
 
 #pragma mark - Misc. Helpers
