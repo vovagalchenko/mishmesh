@@ -16,8 +16,8 @@ s.ios.deployment_target = "7.0"
 
 # File patterns
 
-s.ios.source_files        = "MishMesh/MishMesh/*.{h,m}"
-s.ios.public_header_files = "MishMesh/MishMesh/*.h"
+s.ios.source_files        = "MishMesh/MishMesh/*.{h,m,pch}"
+s.ios.public_header_files = "MishMesh/MishMesh/*.{h,pch}"
 
 # Build settings
 s.requires_arc          = true
