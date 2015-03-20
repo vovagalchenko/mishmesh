@@ -4,7 +4,7 @@ Pod::Spec.new do |s|
 
 s.name                  = "mishmesh"
 s.version               = "1.0.0"
-s.summary               = "iOS View SDK."
+s.summary               = "Mishmesh library"
 s.homepage              = "https://github.com/vovagalchenko/mishmesh"
 s.license               = { :type => "MIT", :file => "LICENSE" }
 s.author                = "Vova Galchenko"
