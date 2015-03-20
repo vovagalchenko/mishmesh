@@ -17,7 +17,7 @@ s.ios.deployment_target = "7.0"
 # File patterns
 
 s.ios.source_files        = "MishMesh/MishMesh/*.{h,m}"
-s.ios.public_header_files = "MishMesh/MishMesh/*.h"
+s.ios.public_header_files = "MishMesh/MishMesh/*.{h,pch}"
 s.prefix_header_contents  = '#import "MishMesh-Prefix.pch"'
 
 
