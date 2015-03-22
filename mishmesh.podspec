@@ -8,7 +8,7 @@ s.summary               = "Mishmesh library"
 s.homepage              = "https://github.com/vovagalchenko/mishmesh"
 s.license               = { :type => "MIT", :file => "LICENSE" }
 s.author                = "Vova Galchenko"
-s.source                = { :git => "https://github.com/vovagalchenko/mishmesh", :tag => "v#{s.version}" }
+s.source                = { :git => "https://github.com/vovagalchenko/mishmesh.git", :tag => "v#{s.version}" }
 
 # Platform
 
