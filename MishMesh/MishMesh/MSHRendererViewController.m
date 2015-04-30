@@ -300,7 +300,7 @@ typedef struct MSHQuaternionSnapshot
     }
     else
     {
-        _aspect = fabsf(self.view.bounds.size.width / self.view.bounds.size.height);
+        _aspect = fabs(self.view.bounds.size.width / self.view.bounds.size.height);
     }
     GLfloat camHorizAngle = 2*atan(_aspect*tan(CAM_VERT_ANGLE/2));
     GLfloat distanceToFitHorizontally = (_maxDistanceToFit * PORTION_OF_DIMENSION_TO_FIT)/(2*tan(camHorizAngle/2));
@@ -634,8 +634,8 @@ static inline BOOL MSHAnimationAttributesAreIntertial(MSHAnimationAttributes ani
 static inline BOOL applyAnimationAttributes(float *attribute, MSHAnimationAttributes *animationAttributes, NSTimeInterval timeSinceLastUpdate)
 {
     BOOL animationDone = NO;
-    if (fabsf((*animationAttributes).targetRateOfChange - (*animationAttributes).rateOfChange) > fabsf(timeSinceLastUpdate*(*animationAttributes).changeAcceleration) &&
-        ((*animationAttributes).targetValueNotSignificant || fabsf(*attribute - (*animationAttributes).targetValue) > fabsf(timeSinceLastUpdate*(*animationAttributes).rateOfChange)))
+    if (fabs((*animationAttributes).targetRateOfChange - (*animationAttributes).rateOfChange) > fabs(timeSinceLastUpdate*(*animationAttributes).changeAcceleration) &&
+        ((*animationAttributes).targetValueNotSignificant || fabs(*attribute - (*animationAttributes).targetValue) > fabs(timeSinceLastUpdate*(*animationAttributes).rateOfChange)))
     {
         (*animationAttributes).rateOfChange += timeSinceLastUpdate*(*animationAttributes).changeAcceleration;
     }
