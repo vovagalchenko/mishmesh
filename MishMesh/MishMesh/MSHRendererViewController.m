@@ -12,6 +12,7 @@
 #import "MSHFace.h"
 #import <CoreMotion/CoreMotion.h>
 #import "MSHDeviceMotionIconView.h"
+#import "MSHUtils.h"
 #import <fenv.h>
 #import <OpenGLES/ES2/glext.h>
 

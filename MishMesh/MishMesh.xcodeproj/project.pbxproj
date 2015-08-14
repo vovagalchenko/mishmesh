@@ -38,9 +38,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		80487E661B7E9CED00EB19CB /* MSHUtils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MSHUtils.h; sourceTree = "<group>"; };
 		807B997B17CC819F004CF689 /* libMishMesh.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libMishMesh.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		807B997E17CC819F004CF689 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
-		807B998217CC819F004CF689 /* MishMesh-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "MishMesh-Prefix.pch"; sourceTree = "<group>"; };
 		807B99AA17CC82A8004CF689 /* MSHRendererViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MSHRendererViewController.h; sourceTree = "<group>"; };
 		807B99AB17CC82A8004CF689 /* MSHRendererViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MSHRendererViewController.m; sourceTree = "<group>"; };
 		807B99AC17CC82A8004CF689 /* MSHDeviceMotionIconView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MSHDeviceMotionIconView.h; sourceTree = "<group>"; };
@@ -109,23 +109,15 @@
 		807B998017CC819F004CF689 /* MishMesh */ = {
 			isa = PBXGroup;
 			children = (
+				80487E661B7E9CED00EB19CB /* MSHUtils.h */,
 				808529AA17CF240700EB5268 /* File Handling */,
 				807B99B017CC82BC004CF689 /* Geometry Definitions */,
 				807B99AA17CC82A8004CF689 /* MSHRendererViewController.h */,
 				807B99AB17CC82A8004CF689 /* MSHRendererViewController.m */,
 				807B99AC17CC82A8004CF689 /* MSHDeviceMotionIconView.h */,
 				807B99AD17CC82A8004CF689 /* MSHDeviceMotionIconView.m */,
-				807B998117CC819F004CF689 /* Supporting Files */,
 			);
 			path = MishMesh;
-			sourceTree = "<group>";
-		};
-		807B998117CC819F004CF689 /* Supporting Files */ = {
-			isa = PBXGroup;
-			children = (
-				807B998217CC819F004CF689 /* MishMesh-Prefix.pch */,
-			);
-			name = "Supporting Files";
 			sourceTree = "<group>";
 		};
 		807B99B017CC82BC004CF689 /* Geometry Definitions */ = {
@@ -287,8 +279,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				DSTROOT = /tmp/MishMesh.dst;
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "MishMesh/MishMesh-Prefix.pch";
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -300,8 +290,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				DSTROOT = /tmp/MishMesh.dst;
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "MishMesh/MishMesh-Prefix.pch";
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
