@@ -3,7 +3,7 @@ Pod::Spec.new do |s|
 # Root specification
 
 s.name                  = "mishmesh"
-s.version               = "1.0.0"
+s.version               = "1.0.1"
 s.summary               = "Mishmesh library"
 s.homepage              = "https://github.com/vovagalchenko/mishmesh"
 s.license               = { :type => "MIT", :file => "LICENSE" }
