@@ -424,7 +424,7 @@ static inline CGFloat getDistance(CGPoint point1, CGPoint point2)
 {
     if ([longPressRecognizer state] == UIGestureRecognizerStateBegan)
     {
-        if (self.motionManager.deviceMotion.attitude && UIInterfaceOrientationIsPortrait(self.interfaceOrientation))
+        if (self.motionManager.deviceMotion.attitude && UIInterfaceOrientationIsPortrait([[UIApplication sharedApplication] statusBarOrientation]))
         {
             [self.deviceMotionIconView removeFromSuperview];
             self.deviceMotionIconView = nil;
@@ -448,7 +448,7 @@ static inline CGFloat getDistance(CGPoint point1, CGPoint point2)
              }];
         }
     }
-    else if ([longPressRecognizer state] == UIGestureRecognizerStateEnded && UIInterfaceOrientationIsPortrait(self.interfaceOrientation))
+    else if ([longPressRecognizer state] == UIGestureRecognizerStateEnded && UIInterfaceOrientationIsPortrait(UIInterfaceOrientationIsPortrait([[UIApplication sharedApplication] statusBarOrientation])))
     {
         _lightPositionBeforeAccelerometerControl = objectCoordinatesLightPosition(self.effect.transform.modelviewMatrix);
         self.referenceAttitude = self.motionManager.deviceMotion.attitude;
@@ -625,11 +625,6 @@ static inline MSHAnimationAttributes MSHAnimationAttributesMakeInertial(float cu
     animationAttributes.changeAcceleration = -(currentRateOfChange/currentRateOfChange)*currentRateOfChange*inertiaDampeningRate;
     animationAttributes.targetValueNotSignificant = YES;
     return animationAttributes;
-}
-
-static inline BOOL MSHAnimationAttributesAreIntertial(MSHAnimationAttributes animationAttributes)
-{
-    return animationAttributes.targetValueNotSignificant;
 }
 
 static inline BOOL applyAnimationAttributes(float *attribute, MSHAnimationAttributes *animationAttributes, NSTimeInterval timeSinceLastUpdate)
@@ -819,13 +814,6 @@ static inline MSHQuaternionSnapshot MSHQuaternionSnapshotMake(GLKQuaternion q, N
     snapshot.quaternion = q;
     snapshot.time = [date timeIntervalSince1970];
     return snapshot;
-}
-
-static inline void printQuaternion(GLKQuaternion quaternion)
-{
-    GLKVector3 axis = GLKQuaternionAxis(quaternion);
-    float angle = GLKQuaternionAngle(quaternion);
-    VLog(@"(%f, %f, %f) %f", axis.x, axis.y, axis.z, angle);
 }
 
 #pragma mark - Light Helpers
